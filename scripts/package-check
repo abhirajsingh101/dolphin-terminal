@@ -9,6 +9,10 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$project_root"
+if ! command -v rg >/dev/null 2>&1; then
+  echo "package-check requires ripgrep (rg)." >&2
+  exit 1
+fi
 npm pack --dry-run --json \
   -w @dolphin-terminal/protocol \
   -w @dolphin-terminal/core \

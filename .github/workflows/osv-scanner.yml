@@ -1,0 +1,37 @@
+name: osv-scanner
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    - cron: '12 12 * * 1'
+  push:
+    branches: [main]
+
+jobs:
+  scan-scheduled:
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
+    permissions:
+      actions: read
+      security-events: write
+      contents: read
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@880d9b542cc66d36d91d51b3fbcc038f5f28cfc5
+    with:
+      scan-args: |-
+        --include-git-root
+        -r
+        ./
+  scan-pr:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    permissions:
+      actions: read
+      security-events: write
+      contents: read
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@880d9b542cc66d36d91d51b3fbcc038f5f28cfc5
+    with:
+      scan-args: |-
+        --include-git-root
+        -r
+        ./

@@ -38,6 +38,8 @@ The reproducible command is `./scripts/security-check`.
 
 - npm audit: 0 known vulnerabilities across 104 resolved dependencies; 0 in
   the 21 production dependencies.
+- Public CI runs Google OSV Scanner 2.5.1 recursively against the repository
+  using the vendor's reusable workflow pinned to an immutable commit.
 - pip-audit 2.10.1: 0 known vulnerabilities in the resolved Python project.
 - Bandit 1.9.4 at medium/high severity: 0 findings.
 - Gitleaks: no secrets found in the working tree.

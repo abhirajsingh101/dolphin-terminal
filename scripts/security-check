@@ -4,11 +4,14 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 
-audit_flags=(--offline)
-if [[ "${DOLPHIN_TERMINAL_NPM_AUDIT_MODE:-offline}" == "online" ]]; then
-  audit_flags=()
-fi
-npm audit "${audit_flags[@]}" --audit-level=high
+for required_tool in npm node python uvx gitleaks rg; do
+  if ! command -v "$required_tool" >/dev/null 2>&1; then
+    echo "security-check requires $required_tool." >&2
+    exit 1
+  fi
+done
+
+npm audit --offline --audit-level=high
 node scripts/generate-third-party-licenses.mjs --check
 python scripts/license-check.py
 uvx pip-audit python --progress-spinner off
