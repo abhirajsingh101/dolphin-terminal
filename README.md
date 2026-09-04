@@ -29,6 +29,15 @@ The lowest-dependency host experience is Docker (Docker is the only host
 prerequisite):
 
 ```bash
+docker run -d --name dolphin-terminal \
+  -p 127.0.0.1:8733:8733 \
+  -v /absolute/path/to/project:/workspace \
+  ghcr.io/abhirajsingh101/dolphin-terminal:0.3.0
+```
+
+To build the same image from source:
+
+```bash
 git clone https://github.com/abhirajsingh101/dolphin-terminal.git
 cd dolphin-terminal
 DOLPHIN_TERMINAL_WORKSPACE=/absolute/path/to/project docker compose up --build
