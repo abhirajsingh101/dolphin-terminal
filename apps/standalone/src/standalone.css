@@ -1,0 +1,96 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.standalone-shell {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--surface-2);
+}
+
+.standalone-header {
+  display: flex;
+  min-height: 48px;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.standalone-header strong,
+.standalone-header span {
+  display: block;
+}
+
+.standalone-header strong {
+  font-size: 13px;
+}
+
+.standalone-header div > span,
+.standalone-gateway {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.standalone-gateway {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standalone-shell > .terminal-workspace {
+  min-height: 0;
+  flex: 1;
+}
+
+.standalone-error {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--term-error-text);
+  background: var(--term-error-bg);
+  color: var(--term-error-text);
+  font-size: 12px;
+}
+
+.standalone-loading {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  place-content: center;
+  gap: 8px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.standalone-loading strong {
+  color: var(--text);
+}
+
+@media (max-width: 820px) {
+  .standalone-header {
+    min-height: 44px;
+    flex-basis: 44px;
+  }
+
+  .standalone-header div > span,
+  .standalone-gateway {
+    display: none;
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "dolphin-terminal-monorepo",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run build -w @dolphin-terminal/react && npm run build -w @dolphin-terminal/standalone",
+    "dev": "./scripts/dev",
+    "dev:ui": "npm run dev -w @dolphin-terminal/standalone",
+    "gateway": "PYTHONPATH=python python -m dolphin_terminal serve --no-ui --no-open",
+    "serve": "PYTHONPATH=python python -m dolphin_terminal serve",
+    "doctor": "PYTHONPATH=python python -m dolphin_terminal doctor",
+    "check": "npm run typecheck && npm test && npm run build && PYTHONPATH=python python -m pytest -q python/tests",
+    "test": "npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/react",
+    "test:e2e": "npm run build && playwright test",
+    "test:soak": "PYTHONPATH=python python scripts/native-soak.py",
+    "check:parity": "node scripts/verify-parity.mjs",
+    "check:parity:dolphin": "node scripts/verify-parity.mjs --require-dolphin",
+    "typecheck": "npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run build -w @dolphin-terminal/react && npm run typecheck -w @dolphin-terminal/standalone"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "playwright": "1.61.1",
+    "typescript": "6.0.3",
+    "vite": "8.1.1",
+    "vitest": "4.1.9"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

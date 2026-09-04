@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+npm run typecheck
+npm test
+npm run build
+PYTHONPATH=python python -m pytest -q python/tests
+npm run test:e2e
+npm run test:soak
+./scripts/package-check
+npm run check:parity

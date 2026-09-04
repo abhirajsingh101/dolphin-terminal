@@ -1,0 +1,8 @@
+services:
+  terminal:
+    build: .
+    ports:
+      - "127.0.0.1:8733:8733"
+    volumes:
+      - "${DOLPHIN_TERMINAL_WORKSPACE:-.}:/workspace"
+    restart: unless-stopped

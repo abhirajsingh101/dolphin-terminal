@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+release_dir="$project_root/release-dist"
+
+cd "$project_root"
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Release artifacts require a clean reviewed source tree." >&2
+  exit 1
+fi
+
+rm -rf -- "$release_dir"
+mkdir -p "$release_dir"
+export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+
+npm run build
+npm pack --silent --pack-destination "$release_dir" \
+  -w @dolphin-terminal/protocol \
+  -w @dolphin-terminal/core \
+  -w @dolphin-terminal/react >/dev/null
+python -m build --outdir "$release_dir" python >/dev/null
+git archive \
+  --format=tar.gz \
+  --prefix=dolphin-terminal-0.3.0/ \
+  -o "$release_dir/dolphin-terminal-0.3.0-source.tar.gz" \
+  HEAD
+npm sbom --sbom-format cyclonedx > "$release_dir/npm-sbom.cdx.json"
+python -m pip install \
+  --dry-run \
+  --ignore-installed \
+  --report "$release_dir/python-resolution.json" \
+  ./python >/dev/null
+
+(
+  cd "$release_dir"
+  find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' \
+    | LC_ALL=C sort \
+    | xargs sha256sum > SHA256SUMS
+)
+
+echo "RELEASE_ARTIFACTS=PASS directory=$release_dir"
+sed -n '1,20p' "$release_dir/SHA256SUMS"

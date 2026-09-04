@@ -1,0 +1,1324 @@
+{
+  "schema_version": "dolphin-terminal-parity-v2",
+  "source_snapshot": {
+    "project": "Dolphin Tasks reference implementation",
+    "head": "119cbe4fd96f983dde20eb83bd01c7abcc447d43",
+    "captured_at": "2026-09-02",
+    "feature_count": 83
+  },
+  "states": [
+    "not_started",
+    "implemented",
+    "verified"
+  ],
+  "release_rule": "All 83 features must be verified with resolvable standalone and Dolphin evidence; visually applicable behavior must have reviewed screenshot or browser assertion evidence.",
+  "features": [
+    {
+      "id": "DT-SESS-001",
+      "description": "Top dock remains the sole full session inventory and can switch among exact projects/workspaces.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-002",
+      "description": "Dock lists each session with long names readable and shared project-name prefixes collapsed only for display, never identity.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-003",
+      "description": "Session rows show truthful metadata: Codex detected, Claude Code detected, shell/current command, recent output, and attached state.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-NATIVE-LIFECYCLE",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-004",
+      "description": "New session creates and opens a persistent shell with an optional validated name or an automatically generated name.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-NATIVE-LIFECYCLE",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-005",
+      "description": "Manual sessions can be renamed inline; validation, duplicate conflicts, no-op renames, and race conflicts remain explicit.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-NATIVE-LIFECYCLE",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-RENAME"
+    },
+    {
+      "id": "DT-SESS-006",
+      "description": "Task-owned and serial-queue-owned sessions remain non-renamable with the backend-provided reason.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-HOST-BOUNDARY",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_host_contract_and_dolphin_policy",
+      "visual_evidence": "DF-RENAME"
+    },
+    {
+      "id": "DT-SESS-007",
+      "description": "Dock refresh has loading, unavailable, retry, empty-project, disallowed-workspace, and success states.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-SESS-008",
+      "description": "Clicking a closed session opens it as a tab in the active pane; clicking an already-open session activates its existing tab instead of duplicating it.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-009",
+      "description": "Ctrl/Cmd-click and middle-click open an exact project/session target in a clean browser tab.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-010",
+      "description": "Placement menu supports active tab group, left, right, above, below, and new browser tab.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-SESS-011",
+      "description": "Dragging a dock session exposes the same five placement targets.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-SESS-012",
+      "description": "A missing/disappeared session leaves a recoverable empty view and a direct way to focus the session dock.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-SESS-013",
+      "description": "Closing a browser tab or split view displays host-selected persistent-engine semantics and never kills the session.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-SESS-014",
+      "description": "The Power icon terminates only the exact persistent session after confirmation, refreshes inventory, and removes its browser tab.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-backend/app/tmux_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-NATIVE-LIFECYCLE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-LAY-001",
+      "description": "Each pane supports multiple horizontally scrollable tabs with project identity, session name, active state, and X close icon.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-LAY-002",
+      "description": "Tabs activate by click and by Left/Right/Home/End keyboard navigation with focus following activation.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-003",
+      "description": "Tabs reorder inside one pane through explicit insertion positions.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-004",
+      "description": "Tabs move between pane groups, and an emptied source split collapses without leaving dead layout branches.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-LAY-005",
+      "description": "A tab can tear out into a recursively nested split on any side of any pane.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-LAY-006",
+      "description": "Horizontal and vertical resize handles are keyboard accessible, have visible focus, and preserve stable child percentages.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-LAY-007",
+      "description": "One exact workspace/session target appears at most once in a browser workspace. Duplicate opens activate the existing target.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-008",
+      "description": "Pane IDs and tab identities remain stable so changing active borders or metadata does not reconnect unrelated terminals.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-009",
+      "description": "Layout, active pane, active tab, and resized percentages survive reload in versioned session storage. Malformed or oversized state fails to a safe fallback.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-010",
+      "description": "Each browser tab owns an independent workspace; legacy v1 state migrates into only the first upgraded tab.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-011",
+      "description": "Direct links preserve the exact project/session target and do not depend on a Dolphin-only hash builder inside the reusable package.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-012",
+      "description": "Pointer, delayed touch, and keyboard drag all work; screen-reader instructions and placement announcements remain present.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-LAYOUT",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-LAY-013",
+      "description": "Narrow layouts show a 44px mobile view switcher and mount only the active pane, avoiding hidden live terminals and horizontal body overflow.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-MOBILE"
+    },
+    {
+      "id": "DT-LAY-014",
+      "description": "The active target callback always reports the exact active workspace/session to the host for todo dispatch and other host integrations.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspaceModel.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DISPATCH",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-DISPATCH"
+    },
+    {
+      "id": "DT-TERM-001",
+      "description": "xterm uses the current font, 13px size, 1.2 line height, blinking cursor, 5,000-line scrollback, ANSI palette, selection color, and dark default theme.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-TERM-002",
+      "description": "FitAddon reacts to host, split, window, and fullscreen resizing and sends a resize only when columns or rows actually changed.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-DENSITY"
+    },
+    {
+      "id": "DT-TERM-003",
+      "description": "WebGL acceleration is attempted for the bounded foreground pane set, falls back to the DOM renderer, disposes on context loss, and releases contexts on unmount.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-TERM-004",
+      "description": "WebSocket input and resize messages preserve the current protocol; binary/Blob output streams into xterm without text re-encoding.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-BACKEND",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-BACKEND"
+    },
+    {
+      "id": "DT-TERM-005",
+      "description": "Server PTY attachment uses TERM=xterm-256color, exact provider session targeting, bounded dimensions, SIGWINCH, output coalescing, and complete fd/subprocess cleanup.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-PTY",
+      "dolphin_integration_test": "DF-BACKEND",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-BACKEND"
+    },
+    {
+      "id": "DT-TERM-006",
+      "description": "A connection handshake times out after 5 seconds, retries after 1/2/4/8 seconds, then enters an actionable offline state.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-RECONNECT",
+      "dolphin_integration_test": "DF-RECONNECT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-RECONNECT"
+    },
+    {
+      "id": "DT-TERM-007",
+      "description": "An opened-then-rejected or previously live connection is not retried as if it were a transient initial connection.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-RECONNECT",
+      "dolphin_integration_test": "DF-RECONNECT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-RECONNECT"
+    },
+    {
+      "id": "DT-TERM-008",
+      "description": "Refresh means refresh inventory while live and reconnect while closed/error/offline/reconnecting. Stale socket generations cannot alter the new connection.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-RECONNECT",
+      "dolphin_integration_test": "DF-RECONNECT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-RECONNECT"
+    },
+    {
+      "id": "DT-TERM-009",
+      "description": "Connection pill, notice, and throttled last-update time remain visible and truthful.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-RECONNECT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-TERM-010",
+      "description": "Native xterm selection and Ctrl/Cmd-C copy continue to work; copy never sends bytes when a selection exists.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-TERM-011",
+      "description": "Touch scrolling moves terminal history without turning every touch into page scrolling.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-TERM-012",
+      "description": "The optional tmux adapter treats absence of a tmux server as an empty inventory but preserves real permission/socket errors.",
+      "owner_package": "@dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-backend/app/tmux_service.py",
+        "dolphin-backend/app/main.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-TMUX-COMPAT",
+      "dolphin_integration_test": "DF-BACKEND",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-BACKEND"
+    },
+    {
+      "id": "DT-UI-001",
+      "description": "Toolbar retains tab strip/title, connection status, last update, optional automation control, view-close, select-text, fullscreen, refresh/reconnect, and Power actions.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-UI-002",
+      "description": "Icon-only controls keep their existing accessible names, tooltips, disabled states, pressed states, grouping, and focus indicators.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-DESKTOP"
+    },
+    {
+      "id": "DT-UI-003",
+      "description": "Fullscreen keeps the active toolbar reachable, hides the session dock and every split divider, and gives one pane the exclusive visible/input/selection surface.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-FULLSCREEN"
+    },
+    {
+      "id": "DT-UI-004",
+      "description": "Background panes become inert and aria-hidden during fullscreen. Entering fullscreen transfers keyboard and dictation focus to the visible xterm.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-UI-005",
+      "description": "Escape pressed inside xterm remains terminal input for shells, readline, Vim, Codex, and Claude; fullscreen exits through Minimize or Escape from non-terminal chrome.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-UI-006",
+      "description": "Desktop keeps at least 80 columns and 40 rows at 1440x900; mobile dock remains 102px with 44x44 coarse-pointer targets.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-MOBILE"
+    },
+    {
+      "id": "DT-UI-007",
+      "description": "One-pane desktop can merge dock and toolbar density exactly as today; split panes remain usable with horizontally scrollable action groups.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SPLIT"
+    },
+    {
+      "id": "DT-UI-008",
+      "description": "Reduced-motion mode disables status and drag-transition animation without hiding status.",
+      "owner_package": "@dolphin-terminal/react",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/TerminalWorkspace.tsx",
+        "dolphin-web/src/terminalWorkspace.css"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-DENSITY",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-DENSITY"
+    },
+    {
+      "id": "DT-SEL-001",
+      "description": "TextSelect toggles a selectable <pre> snapshot without mutating terminal contents or sending input.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SELECT"
+    },
+    {
+      "id": "DT-SEL-002",
+      "description": "Select mode asks the session provider for up to 2,000 history lines and falls back to the last 5,000 local xterm buffer lines if capture fails. Wrapped terminal rows rejoin correctly.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SELECT"
+    },
+    {
+      "id": "DT-SEL-003",
+      "description": "Entering select mode preserves distance from the bottom; wheel and pointer interaction cancel automatic scroll restoration rather than fighting the user.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-E2E-NATIVE",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-SELECT"
+    },
+    {
+      "id": "DT-SEL-004",
+      "description": "File-shaped tokens support absolute, home, project-relative, pane-relative, quoted, escaped-space, Unicode, file://, @/, and line/column forms.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-SELECT",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-005",
+      "description": "At most 2,000 path candidates are extracted, resolved server-side in batches of 300, retried once on a transient failure, published incrementally, and aborted when stale.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-SELECT",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-006",
+      "description": "Only server-confirmed regular files become download links. Symlinks, directories, special files, missing files, and paths outside configured roots do not.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-PATH-SECURITY",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-007",
+      "description": "Downloads stream through a route that independently revalidates containment and no-follow traversal. Candidate resolution never grants download authority.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-PATH-SECURITY",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-008",
+      "description": "Only http://, https://, and www. website text becomes a link; punctuation/wrappers are trimmed safely and www. normalizes to HTTPS.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-SELECT",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-009",
+      "description": "Website links open with noopener noreferrer; native context menus remain available. File and web links never overlap.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-SELECT",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-SEL-010",
+      "description": "Drag-selecting text across a link does not open or download it, and concatenating all rendered segments reproduces the exact terminal text.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalFilePaths.ts",
+        "dolphin-backend/app/terminal_path_service.py",
+        "dolphin-backend/app/workspace_file_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-SELECT",
+      "dolphin_integration_test": "DF-PATHS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-PATHS"
+    },
+    {
+      "id": "DT-ATT-001",
+      "description": "Dragging files over a pane shows an attachment overlay; non-file drags do not activate it.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-ATTACHMENTS",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-ATTACHMENT"
+    },
+    {
+      "id": "DT-ATT-002",
+      "description": "One drop accepts at most four non-empty files, each no larger than 600 MiB, with safe UTF-8 filenames and normalized content types.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-ATTACHMENTS",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-ATTACHMENTS"
+    },
+    {
+      "id": "DT-ATT-003",
+      "description": "Uploads stream to private staged files, enforce the coherent 4 GiB storage quota, publish atomically, and clean partial data on overflow, cancellation, validation failure, or disconnect.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-ATTACHMENT-SERVICE",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-ATTACHMENTS"
+    },
+    {
+      "id": "DT-ATT-004",
+      "description": "PNG/JPEG files are signature-checked, pixel-bounded, decoded, metadata-stripped, and re-encoded before publication. Other files remain generic attachments.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-ATTACHMENT-SERVICE",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-ATTACHMENTS"
+    },
+    {
+      "id": "DT-ATT-005",
+      "description": "Upload storage is private, expires, is pruned at startup/periodically/before quota checks, and never deletes unknown files or follows symlinks.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-ATTACHMENT-SERVICE",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-ATTACHMENTS"
+    },
+    {
+      "id": "DT-ATT-006",
+      "description": "The client binds the entire upload to project, session, and connection generation. Switching/reconnecting aborts it, and a completed stale upload cannot paste into a new target.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-ATTACHMENTS",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "DF-ATTACHMENTS"
+    },
+    {
+      "id": "DT-ATT-007",
+      "description": "Successful paths paste into xterm separated by spaces and focus the terminal, but never press Enter. This remains useful in Codex, Claude Code, and a plain shell.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-ATTACHMENTS",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-ATTACHMENT"
+    },
+    {
+      "id": "DT-ATT-008",
+      "description": "Uploading, partial success, cancellation, validation, quota, disconnected, wrong-mode, and success states remain visible; a success notice expires after the current short interval.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + dolphin-terminal",
+      "original_source_refs": [
+        "dolphin-web/src/TerminalPane.tsx",
+        "dolphin-web/src/terminalAttachmentDrop.ts",
+        "dolphin-backend/app/terminal_attachment_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-ATTACHMENTS",
+      "dolphin_integration_test": "DF-ATTACHMENTS",
+      "visual_review_status": "reviewed",
+      "verification_scope": "standalone_and_dolphin",
+      "visual_evidence": "VIS-ATTACHMENT"
+    },
+    {
+      "id": "DT-VOICE-001",
+      "description": "The focused terminal registers as the active voice target; only a live socket can prepare an insertion.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-002",
+      "description": "Ctrl/Cmd+Shift+Space provides push-to-talk, key release stops recording, and Escape cancels an active recording.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-003",
+      "description": "Terminal transcripts remove unsafe controls, flatten tabs/newlines to spaces, and insert through xterm without Enter.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-004",
+      "description": "Target identity is rechecked immediately before insertion so voice cannot land in a hidden, disconnected, or switched pane.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-005",
+      "description": "Entering fullscreen transfers the dictation target to the fullscreen xterm.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-006",
+      "description": "Active dictation stays in normal responsive flow; idle dictation collapses without consuming a full-height band.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-CORE-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-VOICE-007",
+      "description": "The component accepts a transcription-provider interface; the standalone distribution can optionally include the existing local-ASR provider, while Dolphin supplies its current provider unchanged.",
+      "owner_package": "@dolphin-terminal/core + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/DictationProvider.tsx",
+        "dolphin-web/src/dictationTarget.ts",
+        "dolphin-web/src/TerminalPane.tsx"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-DICTATION",
+      "dolphin_integration_test": "DF-DICTATION",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-DICTATION"
+    },
+    {
+      "id": "DT-AUTO-001",
+      "description": "Per-session Off/Learn/Active segmented controls remain optional but first-class. Learn observes and updates memory without sending; Active may send only under its bounded policy.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-002",
+      "description": "Availability, provider, idle/observing/thinking/countdown/sending/waiting/paused/blocked/error states, warnings, and learning errors remain distinguishable.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-003",
+      "description": "Pending Active sends show a countdown and visible Cancel Send action. Human terminal input, goal change, or Off cancels pending automation.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-004",
+      "description": "Settings preserve goal, turn budget, elapsed-time budget, no-progress limit, review delay, usage, restart limits, and confirmed global stop.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-005",
+      "description": "Project Memory preserves source status, purpose, intent, direction, goals, preferences, success signals, boundaries, source hashes, conflicts, revision/evidence counts, refresh, save, and reset. Memory guides planning but grants no authority.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-006",
+      "description": "Activity preserves privacy-safe exact-session decisions, cancellations, sends, timestamps, reasons, statuses, and error codes.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-AUTO-007",
+      "description": "Automation UI consumes a generic capability/provider interface. The OpenClaw planner and Dolphin database remain adapters rather than dependencies of terminal core.",
+      "owner_package": "@dolphin-terminal/protocol + @dolphin-terminal/react + host adapter",
+      "original_source_refs": [
+        "dolphin-web/src/SessionAutomationControl.tsx",
+        "dolphin-backend/app/session_automation_service.py"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-REACT-AUTOMATION",
+      "dolphin_integration_test": "DF-SPLIT",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "optional_capability_contract_and_dolphin_provider",
+      "visual_evidence": "DF-SPLIT"
+    },
+    {
+      "id": "DT-HOST-001",
+      "description": "Dolphin's Ctrl/Cmd+Shift+K command-palette escape hatch still works from focused xterm without sending bytes; all other host shortcuts continue to defer to xterm.",
+      "owner_package": "Dolphin Tasks adapter",
+      "original_source_refs": [
+        "dolphin-web/src/App.tsx",
+        "dolphin-web/src/dolphinTerminalClient.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-HOST-BOUNDARY",
+      "dolphin_integration_test": "DF-RENAME",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_host_contract_and_dolphin_policy",
+      "visual_evidence": "DF-RENAME"
+    },
+    {
+      "id": "DT-HOST-002",
+      "description": "Dolphin todo dispatch continues to use the component's exact active target and still refuses plain-shell, wrong-project, missing, or ambiguous agent targets.",
+      "owner_package": "Dolphin Tasks adapter",
+      "original_source_refs": [
+        "dolphin-web/src/App.tsx",
+        "dolphin-web/src/dolphinTerminalClient.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-HOST-BOUNDARY",
+      "dolphin_integration_test": "DF-DISPATCH",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_host_contract_and_dolphin_policy",
+      "visual_evidence": "DF-DISPATCH"
+    },
+    {
+      "id": "DT-HOST-003",
+      "description": "Dolphin route changes can request an exact session; the component activates an existing tab or opens it in the active pane without duplicating it.",
+      "owner_package": "Dolphin Tasks adapter",
+      "original_source_refs": [
+        "dolphin-web/src/App.tsx",
+        "dolphin-web/src/dolphinTerminalClient.ts"
+      ],
+      "status": "verified",
+      "standalone_test": "ST-HOST-BOUNDARY",
+      "dolphin_integration_test": "DF-ROUTING",
+      "visual_review_status": "automated_assertion",
+      "verification_scope": "standalone_host_contract_and_dolphin_policy",
+      "visual_evidence": "DF-ROUTING"
+    }
+  ],
+  "verification_snapshot": {
+    "verified_at": "2026-09-04",
+    "standalone_version": "0.3.0",
+    "standalone_commit": "7e23732cc5b3677c07ecf372e912d00fb064486c",
+    "dolphin_commit": "fc8ee258d214d05faf68e498c8f7a4e7cac30ec8",
+    "public_release": false
+  }
+}

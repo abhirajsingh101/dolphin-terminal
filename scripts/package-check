@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+release_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf -- "$release_dir"
+}
+trap cleanup EXIT
+
+cd "$project_root"
+npm pack --dry-run --json \
+  -w @dolphin-terminal/protocol \
+  -w @dolphin-terminal/core \
+  -w @dolphin-terminal/react > "$release_dir/npm-pack.json"
+python -m build --outdir "$release_dir" python >/dev/null
+
+python - "$release_dir" <<'PY'
+import json
+import os
+import pwd
+import sys
+import tarfile
+import zipfile
+from pathlib import Path
+
+release_dir = Path(sys.argv[1])
+private_user = os.getenv("DOLPHIN_TERMINAL_PRIVATE_USER") or pwd.getpwuid(os.getuid()).pw_name
+private_markers = [
+    f"/home/{private_user}".encode(),
+    f"/data/{private_user}".encode(),
+    f"{private_user}@".encode(),
+]
+if private_ip := os.getenv("DOLPHIN_TERMINAL_PRIVATE_IP"):
+    private_markers.append(private_ip.encode())
+npm_report = json.loads((release_dir / "npm-pack.json").read_text())
+assert {item["name"] for item in npm_report} == {
+    "@dolphin-terminal/protocol",
+    "@dolphin-terminal/core",
+    "@dolphin-terminal/react",
+}
+assert {item["version"] for item in npm_report} == {"0.3.0"}
+assert all(
+    any(file["path"] == "LICENSE" for file in item["files"])
+    for item in npm_report
+)
+
+artifacts = sorted(release_dir.glob("dolphin_terminal-*"))
+assert len(artifacts) == 2, [artifact.name for artifact in artifacts]
+for artifact in artifacts:
+    if artifact.suffix == ".whl":
+        with zipfile.ZipFile(artifact) as archive:
+            names = archive.namelist()
+            contents = [archive.read(name) for name in names if not name.endswith("/")]
+    else:
+        with tarfile.open(artifact) as archive:
+            names = archive.getnames()
+            contents = [
+                opened.read()
+                for member in archive.getmembers()
+                if member.isfile() and (opened := archive.extractfile(member)) is not None
+            ]
+    assert any(name.endswith("dolphin_terminal/static/index.html") for name in names), artifact
+    assert any(name.endswith("dolphin_terminal/native_daemon.py") for name in names), artifact
+    assert any(name.endswith("dolphin_terminal/native_runtime.py") for name in names), artifact
+    assert any(name.endswith("dolphin_terminal/THIRD_PARTY_LICENSES.txt") for name in names), artifact
+    assert not any(
+        marker in content
+        for content in contents
+        for marker in private_markers
+    ), artifact
+print("PACKAGE_CONTENTS=PASS")
+PY
+
+if rg -n 'apt-get install.*tmux|DOLPHIN_TERMINAL_SESSION_BACKEND=tmux' \
+  Dockerfile compose.yaml .env.example; then
+  echo "The reference distribution must not require tmux." >&2
+  exit 1
+fi
+
+echo "TMUX_FREE_DEFAULT=PASS"

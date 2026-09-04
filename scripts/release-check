@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+
+./scripts/check
+npm run check:parity:dolphin
+./scripts/security-check
+./scripts/build-release
+./scripts/install-artifact-check
+docker build -t dolphin-terminal:0.3.0-local .
+docker run --rm --entrypoint dolphin-terminal \
+  dolphin-terminal:0.3.0-local doctor --json
+
+echo "RELEASE_CHECK=PASS version=0.3.0 publication=not-performed"

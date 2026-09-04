@@ -1,0 +1,15 @@
+[Unit]
+Description=Dolphin Terminal localhost application
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/dolphin-terminal
+EnvironmentFile=%h/.config/dolphin-terminal/environment
+ExecStart=%h/projects/dolphin-terminal/.venv/bin/dolphin-terminal serve --no-open
+Restart=on-failure
+RestartSec=2
+KillMode=process
+
+[Install]
+WantedBy=default.target

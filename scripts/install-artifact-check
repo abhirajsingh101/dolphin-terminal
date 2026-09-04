@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+release_dir="$project_root/release-dist"
+check_root="$(mktemp -d)"
+runtime_dir="$check_root/runtime"
+state_dir="$check_root/state"
+
+stop_test_daemon() {
+  if [[ -x "$check_root/venv/bin/python" ]]; then
+    DOLPHIN_TERMINAL_NATIVE_RUNTIME_DIR="$runtime_dir" \
+      DOLPHIN_TERMINAL_NATIVE_STATE_DIR="$state_dir" \
+      "$check_root/venv/bin/python" - <<'PY' >/dev/null 2>&1 || true
+from dolphin_terminal.native_runtime import stop_daemon
+
+stop_daemon(force=True)
+PY
+  fi
+}
+
+cleanup() {
+  stop_test_daemon
+  rm -rf -- "$check_root"
+}
+trap cleanup EXIT
+
+wheel=("$release_dir"/dolphin_terminal-0.3.0-*.whl)
+protocol=("$release_dir"/dolphin-terminal-protocol-0.3.0.tgz)
+core=("$release_dir"/dolphin-terminal-core-0.3.0.tgz)
+react=("$release_dir"/dolphin-terminal-react-0.3.0.tgz)
+for artifact in "${wheel[0]}" "${protocol[0]}" "${core[0]}" "${react[0]}"; do
+  if [[ ! -f "$artifact" ]]; then
+    echo "Missing release artifact: $artifact" >&2
+    exit 1
+  fi
+done
+
+python -m venv "$check_root/venv"
+"$check_root/venv/bin/pip" install --quiet "${wheel[0]}"
+mkdir -p "$runtime_dir" "$state_dir" "$check_root/workspace"
+chmod 700 "$runtime_dir" "$state_dir"
+DOLPHIN_TERMINAL_NATIVE_RUNTIME_DIR="$runtime_dir" \
+  DOLPHIN_TERMINAL_NATIVE_STATE_DIR="$state_dir" \
+  DOLPHIN_TERMINAL_WORKSPACES="$check_root/workspace" \
+  "$check_root/venv/bin/dolphin-terminal" doctor --json > "$check_root/doctor.json"
+"$check_root/venv/bin/python" - "$check_root/doctor.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+report = json.loads(Path(sys.argv[1]).read_text())
+assert report["ready"] is True, report
+assert report["version"] == "0.3.0", report
+assert report["session_backend"]["id"] == "native", report
+assert report["session_backend"]["available"] is True, report
+assert report["ui"]["available"] is True, report
+print("PYTHON_WHEEL_INSTALL=PASS backend=native ui=embedded")
+PY
+stop_test_daemon
+
+npm_dir="$check_root/npm"
+mkdir -p "$npm_dir"
+npm install --quiet --ignore-scripts --prefix "$npm_dir" \
+  "${protocol[0]}" "${core[0]}" "${react[0]}" \
+  react@19.2.7 react-dom@19.2.7 vite@8.1.1
+(
+  cd "$npm_dir"
+  node --input-type=module <<'JS'
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { build } from 'vite'
+
+const protocol = await import('@dolphin-terminal/protocol')
+const core = await import('@dolphin-terminal/core')
+const customization = await import('@dolphin-terminal/react/customization')
+
+if (protocol === null || typeof protocol !== 'object') {
+  throw new Error('Protocol package import failed')
+}
+if (typeof core.createTerminalWorkspace !== 'function') {
+  throw new Error('Core package public API is unavailable')
+}
+if (typeof customization.defaultTerminalIcons !== 'object') {
+  throw new Error('React customization subpath is unavailable')
+}
+
+const entry = join(process.cwd(), 'consumer-entry.js')
+await writeFile(entry, `
+  import { TerminalRuntimeProvider, TerminalWorkspace } from '@dolphin-terminal/react'
+  import '@dolphin-terminal/react/styles.css'
+  export { TerminalRuntimeProvider, TerminalWorkspace }
+`)
+await build({
+  configFile: false,
+  logLevel: 'silent',
+  build: {
+    write: false,
+    lib: {
+      entry,
+      formats: ['es'],
+      fileName: 'consumer',
+      cssFileName: 'consumer',
+    },
+  },
+})
+console.log('NPM_TARBALL_INSTALL=PASS packages=protocol,core,react')
+JS
+)
+
+echo "ARTIFACT_INSTALL_CHECK=PASS isolation=temporary"

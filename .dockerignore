@@ -1,0 +1,10 @@
+.git
+.venv
+node_modules
+**/dist
+python/dolphin_terminal/static
+.planning
+logs
+*.log
+*.pyc
+__pycache__

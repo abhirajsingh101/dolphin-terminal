@@ -1,0 +1,69 @@
+{
+  "name": "@dolphin-terminal/react",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/TerminalRuntime.d.ts",
+      "import": "./dist/TerminalRuntime.js"
+    },
+    "./workspace": {
+      "types": "./dist/TerminalWorkspace.d.ts",
+      "import": "./dist/TerminalWorkspace.js"
+    },
+    "./pane": {
+      "types": "./dist/TerminalPane.d.ts",
+      "import": "./dist/TerminalPane.js"
+    },
+    "./dictation": {
+      "types": "./dist/TerminalDictation.d.ts",
+      "import": "./dist/TerminalDictation.js"
+    },
+    "./dictation-client": {
+      "types": "./dist/dictationClient.d.ts",
+      "import": "./dist/dictationClient.js"
+    },
+    "./customization": {
+      "types": "./dist/customization.d.ts",
+      "import": "./dist/customization.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./theme.css": "./dist/theme.css"
+  },
+  "files": ["dist", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp src/styles.css dist/styles.css && cp src/theme.css dist/theme.css",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/utilities": "3.2.2",
+    "@dolphin-terminal/core": "0.3.0",
+    "@dolphin-terminal/protocol": "0.3.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/addon-webgl": "0.19.0",
+    "@xterm/xterm": "6.0.0",
+    "lucide-react": "1.22.0",
+    "react-resizable-panels": "4.12.0"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "vitest": "4.1.9"
+  },
+  "license": "Apache-2.0"
+}

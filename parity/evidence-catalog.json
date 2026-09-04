@@ -1,0 +1,247 @@
+{
+  "schema_version": "dolphin-terminal-evidence-v1",
+  "generated_at": "2026-09-04",
+  "repositories": {
+    "standalone": ".",
+    "dolphin": "../dolphin-tasks"
+  },
+  "evidence": {
+    "ST-E2E-NATIVE": {
+      "repository": "standalone",
+      "files": ["e2e/standalone.spec.ts"],
+      "command": "npm run test:e2e",
+      "scope": "Compiled standalone UI against the real native PTY daemon: capabilities, creation, live input, snapshot, select mode, detach persistence, exact links, splits, fullscreen, responsive layouts, attachments, and exact confirmed termination."
+    },
+    "ST-CORE-LAYOUT": {
+      "repository": "standalone",
+      "files": ["packages/core/src/terminalWorkspaceModel.test.ts"],
+      "command": "npm test",
+      "scope": "Recursive splits, placement, tab reorder/move/close, duplicate prevention, stable identities, resize persistence, malformed-state rejection, and v1 migration."
+    },
+    "ST-CORE-RECONNECT": {
+      "repository": "standalone",
+      "files": ["packages/core/src/terminalReconnect.test.ts"],
+      "command": "npm test",
+      "scope": "Five-second handshake policy, bounded 1/2/4/8-second retry budget, opened-socket handling, and truthful status copy."
+    },
+    "ST-CORE-SELECT": {
+      "repository": "standalone",
+      "files": ["packages/core/src/terminalFilePaths.test.ts", "packages/core/src/terminalWebLinks.test.ts"],
+      "command": "npm test",
+      "scope": "Bounded file-token extraction/batching, exact snapshot reconstruction, confirmed-link segmentation, URL allowlist, punctuation, and unsafe-scheme rejection."
+    },
+    "ST-CORE-ATTACHMENTS": {
+      "repository": "standalone",
+      "files": ["packages/core/src/terminalAttachmentDrop.test.ts"],
+      "command": "npm test",
+      "scope": "File-drag detection, count/size/name validation, exact target generation guards, agent-neutral paste copy, and never-submit semantics."
+    },
+    "ST-CORE-DICTATION": {
+      "repository": "standalone",
+      "files": ["packages/core/src/dictationTarget.test.ts"],
+      "command": "npm test",
+      "scope": "Terminal-control removal, newline/tab flattening, safe insertion spacing, and transcript formatting without Enter."
+    },
+    "ST-REACT-AUTOMATION": {
+      "repository": "standalone",
+      "files": ["packages/react/src/SessionAutomationControl.test.tsx"],
+      "command": "npm test",
+      "scope": "Optional provider UI distinguishes Learn/Active, bounded countdown/cancel states, agent readiness, and project-memory failures."
+    },
+    "ST-REACT-DICTATION": {
+      "repository": "standalone",
+      "files": ["packages/react/src/dictationClient.test.ts"],
+      "command": "npm test",
+      "scope": "Optional transcription-provider request and explicit unavailable/error behavior."
+    },
+    "ST-GATEWAY": {
+      "repository": "standalone",
+      "files": ["python/tests/test_app.py", "python/tests/test_config.py"],
+      "command": "python -m pytest -q python/tests",
+      "scope": "Exact workspace/session routing, capability truth, origin and mutation boundaries, explicit workspace configuration, and optional-feature defaults."
+    },
+    "ST-NATIVE-LIFECYCLE": {
+      "repository": "standalone",
+      "files": ["python/tests/test_native_backend.py"],
+      "command": "python -m pytest -q python/tests/test_native_backend.py",
+      "scope": "Native CRUD and conflicts, exact workspace identity, private socket modes, live PTY I/O, multi-attach replay, detach survival, gateway recreation, and fail-closed daemon stop."
+    },
+    "ST-TMUX-COMPAT": {
+      "repository": "standalone",
+      "files": ["python/tests/test_session_backend.py", "python/tests/test_tmux_service.py"],
+      "command": "python -m pytest -q python/tests",
+      "scope": "Optional tmux adapter health, missing-server behavior, exact lifecycle/rename/agent observation, literal input, and provider-neutral error mapping."
+    },
+    "ST-PATH-SECURITY": {
+      "repository": "standalone",
+      "files": ["python/tests/test_path_security.py"],
+      "command": "python -m pytest -q python/tests/test_path_security.py",
+      "scope": "Allowed-root resolution plus independent no-follow download revalidation and symlink/escape refusal."
+    },
+    "ST-ATTACHMENT-SERVICE": {
+      "repository": "standalone",
+      "files": ["python/tests/test_terminal_attachment_service.py"],
+      "command": "python -m pytest -q python/tests/test_terminal_attachment_service.py",
+      "scope": "Private streaming, inclusive limits, quotas, cancellation/overflow cleanup, expiry, unknown-file preservation, and image sanitation."
+    },
+    "ST-PTY": {
+      "repository": "standalone",
+      "files": ["python/tests/test_pty.py", "python/dolphin_terminal/native_attach.py"],
+      "command": "python -m pytest -q python/tests/test_pty.py python/tests/test_native_backend.py",
+      "scope": "Output coalescing and PTY cleanup plus regression coverage for input delivered during attachment startup."
+    },
+    "ST-SOAK": {
+      "repository": "standalone",
+      "files": ["scripts/native-soak.py"],
+      "command": "npm run test:soak",
+      "scope": "Eight gateway recreations and eight WebSocket attachments retain one native daemon PID, exact session identity, and all eight terminal markers."
+    },
+    "ST-SECURITY": {
+      "repository": "standalone",
+      "files": ["scripts/security-check", "SECURITY-REVIEW.md"],
+      "command": "./scripts/security-check",
+      "scope": "Dependency vulnerability, Python static analysis, secret, and personal-path review for the release tree."
+    },
+    "ST-PACKAGE": {
+      "repository": "standalone",
+      "files": ["scripts/package-check", "scripts/install-artifact-check", "Dockerfile"],
+      "command": "./scripts/package-check && ./scripts/build-release && ./scripts/install-artifact-check && docker build -t dolphin-terminal:0.3.0-local .",
+      "scope": "npm/Python artifact contents, clean wheel and npm tarball installs, embedded UI/native daemon, neutral release content, tmux-free default, and runnable container doctor."
+    },
+    "ST-HOST-BOUNDARY": {
+      "repository": "standalone",
+      "files": ["packages/protocol/src/index.ts", "packages/react/src/TerminalRuntime.tsx"],
+      "command": "npm run typecheck",
+      "scope": "Typed provider boundary keeps routing, command palette, task dispatch, dictation, and automation owned by the consuming host."
+    },
+    "DF-SPLIT": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/terminal-split-workspace.spec.ts"],
+      "command": "npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "scope": "Packaged component dock, tabs, drag/keyboard placement, recursive splits, persistence/migration, exact links, fullscreen exclusivity, mobile, and automation behavior in Dolphin."
+    },
+    "DF-RECONNECT": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/terminal-reconnect.spec.ts"],
+      "command": "npm run test:e2e -- terminal-reconnect.spec.ts",
+      "scope": "Visible stalled-handshake retries and actionable bounded offline state in the Dolphin host."
+    },
+    "DF-PATHS": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/terminal-path-download.spec.ts"],
+      "command": "npm run test:e2e -- terminal-path-download.spec.ts",
+      "scope": "Confirmed files only, retry, safe external links/context menu, exact selectable text, and no activation during drag selection."
+    },
+    "DF-DICTATION": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/dictation.spec.ts"],
+      "command": "npm run test:e2e -- dictation.spec.ts",
+      "scope": "Exact xterm insertion without Enter plus active/idle responsive dictation layout."
+    },
+    "DF-RENAME": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/tmux-session-rename.spec.ts"],
+      "command": "npm run test:e2e -- tmux-session-rename.spec.ts",
+      "scope": "Long/shared-prefix names, exact inline rename, managed-session protection, mobile controls, and terminal-focused command palette."
+    },
+    "DF-DENSITY": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/cockpit-density.spec.ts"],
+      "command": "npm run test:e2e -- cockpit-density.spec.ts",
+      "scope": "Sole top inventory, 80-column/40-row desktop terminal floor, and cockpit density persistence."
+    },
+    "DF-ATTACHMENTS": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/control-center.spec.ts"],
+      "command": "npm run test:e2e -- control-center.spec.ts --grep 'drops|attachment'",
+      "scope": "Exact Codex/Claude/plain-shell attachment targets, no automatic submission, and compact terminal toolbar sizing."
+    },
+    "DF-DISPATCH": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/e2e/control-center.spec.ts", "dolphin-backend/tests/test_codex_todo_service.py"],
+      "command": "npm run test:e2e -- control-center.spec.ts && python -m pytest -q",
+      "scope": "Todo work is sent only to the selected exact eligible agent target and failure remains recoverable."
+    },
+    "DF-ROUTING": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/src/appRoute.test.ts", "dolphin-web/e2e/terminal-split-workspace.spec.ts"],
+      "command": "npm test && npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "scope": "Exact session deep links activate or open once while host route construction remains outside the component."
+    },
+    "DF-UNIT": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/src/cssHygiene.test.ts", "dolphin-web/src/SessionAutomationControl.test.tsx"],
+      "command": "npm test",
+      "scope": "Full Dolphin frontend unit suite with packaged component boundary, shared automation copy, style ordering, focus, motion, and typography contracts."
+    },
+    "DF-BACKEND": {
+      "repository": "dolphin",
+      "files": [
+        "dolphin-backend/tests/test_tmux_service.py",
+        "dolphin-backend/tests/test_tmux_session_rename.py",
+        "dolphin-backend/tests/test_terminal_attachment_service.py",
+        "dolphin-backend/tests/test_terminal_path_service.py",
+        "dolphin-backend/tests/test_image_attachment_service.py",
+        "dolphin-backend/tests/test_dictation_service.py",
+        "dolphin-backend/tests/test_session_automation.py",
+        "dolphin-backend/tests/test_codex_todo_service.py"
+      ],
+      "command": "python -m compileall -q app && python -m pytest -q tests/test_tmux_service.py tests/test_tmux_session_rename.py tests/test_terminal_attachment_service.py tests/test_terminal_path_service.py tests/test_image_attachment_service.py tests/test_dictation_service.py tests/test_session_automation.py tests/test_codex_todo_service.py",
+      "scope": "The 140-test focused Dolphin backend gate retains canonical tmux, attachments, dictation, automation, and todo policy."
+    },
+    "DF-BOUNDARY": {
+      "repository": "dolphin",
+      "files": ["dolphin-web/scripts/check-terminal-boundary.mjs", "dolphin-web/src/dolphinTerminalClient.ts"],
+      "command": "npm run check:terminal-boundary && npm run build",
+      "scope": "Dolphin imports only the standalone package UI/core while retaining a thin product adapter; deleted duplicate implementations cannot return unnoticed."
+    },
+    "DF-ROLLBACK": {
+      "repository": "dolphin",
+      "files": ["docs/standalone-terminal-extraction-plan.md"],
+      "command": "VITE_DOLPHIN_TERMINAL_SOURCE=legacy npm run build; packaged build and the same 36 terminal browser cases",
+      "scope": "The legacy implementation was built and exercised before removal; the immutable 7f8161c source commit remains the tested Git rollback point."
+    },
+    "VIS-DESKTOP": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-desktop.png"],
+      "command": "visual review",
+      "scope": "1440x900 dock, tab, toolbar, live native terminal, theme, status, and current icons."
+    },
+    "VIS-SELECT": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-select.png"],
+      "command": "visual review",
+      "scope": "Selectable terminal-history surface and toolbar toggle."
+    },
+    "VIS-SPLIT": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-split.png"],
+      "command": "visual review",
+      "scope": "Two live exact sessions, divider, independent toolbars, and horizontally constrained tabs."
+    },
+    "VIS-ATTACHMENT": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-attachment.png"],
+      "command": "visual review",
+      "scope": "File-drag attachment overlay over an exact terminal pane."
+    },
+    "VIS-FULLSCREEN": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-fullscreen.png"],
+      "command": "visual review",
+      "scope": "Exclusive fullscreen terminal and reachable active toolbar with background panes/dividers hidden."
+    },
+    "VIS-TABLET": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-tablet.png"],
+      "command": "visual review",
+      "scope": "820x900 intermediate responsive layout."
+    },
+    "VIS-MOBILE": {
+      "repository": "standalone",
+      "files": ["parity/evidence/standalone-native-mobile.png"],
+      "command": "visual review",
+      "scope": "390x844 mobile switcher, one mounted live pane, 44px actions, and zero body overflow."
+    }
+  }
+}

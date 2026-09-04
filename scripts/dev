@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -z "${DOLPHIN_TERMINAL_WORKSPACES:-}" ]; then
+  echo "Set DOLPHIN_TERMINAL_WORKSPACES to at least one trusted project path." >&2
+  exit 2
+fi
+
+cleanup() {
+  if [ -n "${gateway_pid:-}" ] && kill -0 "$gateway_pid" 2>/dev/null; then
+    kill -TERM "$gateway_pid" 2>/dev/null || true
+    wait "$gateway_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+cd "$ROOT"
+python_bin="python"
+if [ -x "$ROOT/.venv/bin/python" ]; then
+  python_bin="$ROOT/.venv/bin/python"
+fi
+PYTHONPATH="$ROOT/python" "$python_bin" -m dolphin_terminal serve --no-ui --no-open &
+gateway_pid=$!
+npm run dev:ui
