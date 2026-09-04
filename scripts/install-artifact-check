@@ -61,7 +61,7 @@ stop_test_daemon
 
 npm_dir="$check_root/npm"
 mkdir -p "$npm_dir"
-npm install --quiet --ignore-scripts --prefix "$npm_dir" \
+npm install --quiet --ignore-scripts --no-audit --prefix "$npm_dir" \
   "${protocol[0]}" "${core[0]}" "${react[0]}" \
   react@19.2.7 react-dom@19.2.7 vite@8.1.1
 (

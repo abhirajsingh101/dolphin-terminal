@@ -6,7 +6,7 @@ COPY packages/protocol/package.json packages/protocol/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/react/package.json packages/react/package.json
 COPY apps/standalone/package.json apps/standalone/package.json
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --no-audit
 COPY packages ./packages
 COPY apps ./apps
 RUN npm run build

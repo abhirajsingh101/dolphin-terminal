@@ -14,7 +14,7 @@ done
 cd "$project_root"
 python -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
-npm ci
+npm ci --no-audit
 npm run build
 .venv/bin/pip install -e './python[dev]'
 
