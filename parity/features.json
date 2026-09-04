@@ -1317,8 +1317,8 @@
   "verification_snapshot": {
     "verified_at": "2026-09-04",
     "standalone_version": "0.3.0",
-    "standalone_commit": "7e23732cc5b3677c07ecf372e912d00fb064486c",
+    "standalone_commit": "c10d9149ea8a93802eb2cdb7a385be486d407920",
     "dolphin_commit": "fc8ee258d214d05faf68e498c8f7a4e7cac30ec8",
-    "public_release": false
+    "public_release": true
   }
 }
