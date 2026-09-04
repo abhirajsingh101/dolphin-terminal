@@ -105,7 +105,12 @@ test.describe.serial('standalone native terminal', () => {
       })
       .click({ modifiers: ['Control'] });
     const popup = await popupPromise;
-    await popup.waitForLoadState('domcontentloaded');
+    await popup.waitForURL(
+      (url) =>
+        url.searchParams.get('session') === primary &&
+        url.searchParams.get('workspace') === workspaceId,
+      { waitUntil: 'domcontentloaded' },
+    );
     expect(new URL(popup.url()).searchParams.get('session')).toBe(primary);
     expect(new URL(popup.url()).searchParams.get('workspace')).toBe(workspaceId);
     await popup.close();
