@@ -1,7 +1,17 @@
 {
   "name": "@dolphin-terminal/protocol",
   "version": "0.3.0",
+  "description": "Provider-neutral TypeScript contracts for Dolphin Terminal hosts and gateways",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhirajsingh101/dolphin-terminal.git",
+    "directory": "packages/protocol"
+  },
+  "homepage": "https://github.com/abhirajsingh101/dolphin-terminal#readme",
+  "bugs": {
+    "url": "https://github.com/abhirajsingh101/dolphin-terminal/issues"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

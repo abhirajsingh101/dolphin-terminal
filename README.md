@@ -1,5 +1,9 @@
 # Dolphin Terminal
 
+[![CI](https://github.com/abhirajsingh101/dolphin-terminal/actions/workflows/ci.yml/badge.svg)](https://github.com/abhirajsingh101/dolphin-terminal/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/abhirajsingh101/dolphin-terminal)](https://github.com/abhirajsingh101/dolphin-terminal/releases)
+[![License](https://img.shields.io/github/license/abhirajsingh101/dolphin-terminal)](LICENSE)
+
 Dolphin Terminal is a standalone, embeddable terminal workspace for humans and
 AI agents. One local service provides the browser UI, persistent sessions,
 tabs, recursive splits, exact input targeting, fullscreen, selectable history,
@@ -25,6 +29,8 @@ The lowest-dependency host experience is Docker (Docker is the only host
 prerequisite):
 
 ```bash
+git clone https://github.com/abhirajsingh101/dolphin-terminal.git
+cd dolphin-terminal
 DOLPHIN_TERMINAL_WORKSPACE=/absolute/path/to/project docker compose up --build
 ```
 
@@ -43,6 +49,13 @@ tmux. A release wheel already contains the compiled UI and only needs Python.
 One `dolphin-terminal` command serves the UI and API while an automatically
 managed, private native daemon owns persistent PTYs across browser and gateway
 restarts. Run `dolphin-terminal doctor` for a concise readiness check.
+
+The signed-by-checksum GitHub release wheel needs no source checkout or Node:
+
+```bash
+python -m pip install "https://github.com/abhirajsingh101/dolphin-terminal/releases/download/v0.3.0/dolphin_terminal-0.3.0-py3-none-any.whl"
+dolphin-terminal serve /absolute/path/to/project
+```
 
 ## Security posture
 

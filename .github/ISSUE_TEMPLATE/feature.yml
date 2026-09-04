@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a provider-neutral improvement to Dolphin Terminal.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What terminal workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+      description: Describe the user-visible behavior, not a host-specific implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: portability
+    attributes:
+      label: Portability and safety
+      description: How should this work without requiring tmux, an LLM, or a specific host app?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This can preserve exact workspace/session targeting and manual user control.
+          required: true

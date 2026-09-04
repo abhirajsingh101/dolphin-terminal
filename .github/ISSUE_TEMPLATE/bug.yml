@@ -1,0 +1,69 @@
+name: Bug report
+description: Report reproducible Dolphin Terminal behavior that is not working correctly.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve Dolphin Terminal. Remove credentials, private paths, terminal contents, and session names from reports.
+  - type: input
+    id: version
+    attributes:
+      label: Dolphin Terminal version
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Distribution
+      options:
+        - Python wheel
+        - Docker
+        - React package
+        - Source checkout
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Session backend
+      options:
+        - Native
+        - tmux compatibility adapter
+        - Host-provided adapter
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest safe sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Python or Node version, and relevant non-secret configuration.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private paths, terminal contents, and personal session names.
+          required: true

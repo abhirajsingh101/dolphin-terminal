@@ -16,6 +16,12 @@ dependencies = [
   "uvicorn[standard]>=0.27,<1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/abhirajsingh101/dolphin-terminal"
+Documentation = "https://github.com/abhirajsingh101/dolphin-terminal/tree/main/docs"
+Repository = "https://github.com/abhirajsingh101/dolphin-terminal.git"
+Issues = "https://github.com/abhirajsingh101/dolphin-terminal/issues"
+
 [project.optional-dependencies]
 dev = [
   "build>=1.2,<2",
