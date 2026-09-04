@@ -120,6 +120,9 @@ The standalone project is implemented and Dolphin Tasks consumes the package
 through a thin adapter with duplicate terminal sources removed. Native
 persistence is the standalone default; tmux is an opt-in compatibility
 adapter. All 83 parity entries have executable evidence, and the local
-security/package/browser gates are release-ready. It has not been published or
-pushed. Public publishing, artifact signing, and remote exposure still require
-explicit owner authorization.
+security/package/browser gates are release-ready. Version 0.3.0 is public on
+[GitHub](https://github.com/abhirajsingh101/dolphin-terminal/releases/tag/v0.3.0)
+and as the `ghcr.io/abhirajsingh101/dolphin-terminal:0.3.0` container. npm and
+PyPI publishing workflows are prepared for their registry-side trusted
+publisher bootstrap. Direct remote exposure remains an operator-controlled
+deployment decision and requires authentication and TLS.
