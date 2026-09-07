@@ -51,6 +51,18 @@ function commitExists(root, revision) {
   }
 }
 
+function commitIsAncestorOfHead(root, revision) {
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', revision, 'HEAD'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 if (snapshot.standalone_version !== packageMetadata.version) {
   fail(
     `verification snapshot version ${snapshot.standalone_version ?? 'missing'} does not match package ${packageMetadata.version}`,
@@ -58,12 +70,21 @@ if (snapshot.standalone_version !== packageMetadata.version) {
 }
 if (!commitExists(projectRoot, snapshot.standalone_implementation_commit)) {
   fail('verification snapshot lacks a reachable standalone implementation commit');
+} else if (
+  !commitIsAncestorOfHead(projectRoot, snapshot.standalone_implementation_commit)
+) {
+  fail('standalone implementation commit is not an ancestor of the release candidate');
 }
 if (
   dolphinAvailable &&
   !commitExists(dolphinRoot, snapshot.dolphin_candidate_commit)
 ) {
   fail('verification snapshot lacks a reachable Dolphin candidate commit');
+} else if (
+  dolphinAvailable &&
+  !commitIsAncestorOfHead(dolphinRoot, snapshot.dolphin_candidate_commit)
+) {
+  fail('Dolphin candidate commit is not an ancestor of the supplied checkout');
 }
 if (snapshot.publication_status_at_verification !== 'not-performed') {
   fail('verification snapshot must describe the pre-publication release gate');

@@ -1317,8 +1317,8 @@
   "verification_snapshot": {
     "verified_at": "2026-09-07",
     "standalone_version": "0.3.3",
-    "standalone_implementation_commit": "PENDING_IMPLEMENTATION_COMMIT",
-    "dolphin_candidate_commit": "PENDING_HOST_COMMIT",
+    "standalone_implementation_commit": "b5096524561f634fc65b8f95ea27e4c3254dcc39",
+    "dolphin_candidate_commit": "7d207382ae99ae5eff8b62bb4acd3493c3cfa138",
     "publication_status_at_verification": "not-performed"
   }
 }
