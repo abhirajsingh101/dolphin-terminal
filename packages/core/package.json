@@ -1,6 +1,6 @@
 {
   "name": "@dolphin-terminal/core",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "Pure terminal tabs, splits, persistence, link, attachment, and reconnect logic",
   "type": "module",
   "repository": {

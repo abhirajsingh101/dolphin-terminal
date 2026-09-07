@@ -4,13 +4,14 @@ const workspaceId = 'dolphin-terminal';
 const run = `${Date.now()}-${process.pid}`;
 const requestedPrimary = `e2e-primary-${run}`;
 const requestedSecondary = `e2e-secondary-${run}`;
+const requestedRouteTarget = `e2e-route-target-${run}`;
 const primary = `${requestedPrimary}-dolphin`;
 const secondary = `${requestedSecondary}-dolphin`;
 
 async function createFromDock(page: Page, name: string) {
-  await page.getByRole('button', { name: /New session in dolphin-terminal/i }).click();
-  await page.getByRole('textbox', { name: /Name for new dolphin-terminal session/i }).fill(name);
-  await page.getByRole('button', { name: /Create and open session in dolphin-terminal/i }).click();
+  await page.getByRole('button', { name: /New session in /i }).click();
+  await page.getByRole('textbox', { name: /Name for new .* session/i }).fill(name);
+  await page.getByRole('button', { name: /Create and open session in /i }).click();
 }
 
 async function inventory(request: APIRequestContext) {
@@ -32,7 +33,57 @@ test.describe.serial('standalone native terminal', () => {
     }
   });
 
+  test('isolates an explicit route target from stale global workspace state', async ({
+    page,
+    request,
+  }) => {
+    const created = await request.post(
+      `/terminal/v1/workspaces/${workspaceId}/sessions`,
+      { data: { name: requestedRouteTarget, mode: 'shell' } },
+    );
+    expect(created.status()).toBe(201);
+    const routeSession = ((await created.json()) as { name: string }).name;
+
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem(
+        'dolphin.terminal.workspace.tab.v2',
+        JSON.stringify({
+          version: 2,
+          root: {
+            type: 'terminal',
+            id: 'stale-pane',
+            preferredProjectId: 'stale-workspace',
+            tabs: [{ projectId: 'stale-workspace', sessionName: 'stale-session' }],
+            activeTabIndex: 0,
+          },
+          activePaneId: 'stale-pane',
+        }),
+      );
+    });
+
+    await page.goto(
+      `/?workspace=${encodeURIComponent(workspaceId)}&session=${encodeURIComponent(routeSession)}`,
+    );
+    await expect(page.locator('.terminal-pane').filter({ hasText: routeSession })).toBeVisible();
+    await expect(page.getByLabel('Terminal connection: live')).toBeVisible();
+    await expect(page.getByText(/Workspace not found/)).toHaveCount(0);
+    const scopedState = await page.evaluate(
+      ({ projectId, sessionName }) =>
+        window.sessionStorage.getItem(
+          [
+            'dolphin.terminal.workspace.tab.v2',
+            encodeURIComponent(projectId),
+            encodeURIComponent(sessionName),
+          ].join(':'),
+        ),
+      { projectId: workspaceId, sessionName: routeSession },
+    );
+    expect(scopedState).toContain(routeSession);
+    expect(scopedState).not.toContain('stale-workspace');
+  });
+
   test('runs the complete UI on native persistence without tmux or optional AI services', async ({
+    browser,
     page,
     request,
   }) => {
@@ -71,14 +122,48 @@ test.describe.serial('standalone native terminal', () => {
       .toContain(`NATIVE_BROWSER_${run}`);
 
     await page.getByTitle(/Select terminal text/).click();
-    await expect(page.getByLabel('Selectable terminal text')).toContainText(
+    const copyLayer = page.getByLabel('Selectable terminal text');
+    await expect(copyLayer).toContainText(
       `NATIVE_BROWSER_${run}`,
     );
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await copyLayer.evaluate((element, marker) => {
+      const text = element.textContent ?? '';
+      const start = text.indexOf(marker);
+      if (start < 0 || !element.firstChild) throw new Error('copy marker missing');
+      const range = document.createRange();
+      range.setStart(element.firstChild, start);
+      range.setEnd(element.firstChild, start + marker.length);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    }, `NATIVE_BROWSER_${run}`);
+    await page.getByTitle('Copy selection').click();
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toBe(`NATIVE_BROWSER_${run}`);
     await page.screenshot({
       path: 'test-results/evidence/standalone-native-select.png',
       animations: 'disabled',
     });
     await page.getByTitle('Exit select mode').click();
+
+    await terminal.focus();
+    await page.keyboard.type('sleep 30');
+    await page.keyboard.press('Enter');
+    await page.getByTitle('Send Ctrl-C').click();
+    await terminal.focus();
+    await page.keyboard.type(`printf 'AFTER_INTERRUPT_${run}\\n'`);
+    await page.keyboard.press('Enter');
+    await expect
+      .poll(async () => {
+        const snapshot = await request.get(
+          `/terminal/v1/workspaces/${workspaceId}/sessions/${primary}/snapshot`,
+        );
+        return (await snapshot.json()).content as string;
+      })
+      .toContain(`AFTER_INTERRUPT_${run}`);
     await page.screenshot({
       path: 'test-results/evidence/standalone-native-desktop.png',
       animations: 'disabled',
@@ -88,7 +173,7 @@ test.describe.serial('standalone native terminal', () => {
     expect((await inventory(request)).sessions.map((session) => session.name)).toContain(primary);
     await page
       .getByRole('button', {
-        name: new RegExp(`Open dolphin-terminal session ${primary} as a tab`),
+        name: new RegExp(`Open .* session ${primary} as a tab`),
       })
       .click();
     await expect(page.getByLabel('Terminal connection: live')).toBeVisible();
@@ -101,7 +186,7 @@ test.describe.serial('standalone native terminal', () => {
     const popupPromise = page.waitForEvent('popup');
     await page
       .getByRole('button', {
-        name: new RegExp(`Show dolphin-terminal session ${primary} in its open tab`),
+        name: new RegExp(`Show .* session ${primary} in its open tab`),
       })
       .click({ modifiers: ['Control'] });
     const popup = await popupPromise;
@@ -127,6 +212,19 @@ test.describe.serial('standalone native terminal', () => {
     });
 
     const attachmentPane = page.locator('.terminal-pane').last();
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await attachmentPane
+      .getByRole('button', { name: /Attach files or images to/ })
+      .click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({
+      name: 'release-picker-evidence.ts',
+      mimeType: 'text/typescript',
+      buffer: Buffer.from('export const safe = true;'),
+    });
+    await expect(attachmentPane.locator('.terminal-attachment-status')).toContainText(
+      'Path pasted for 1 attachment.',
+    );
     const attachmentTransfer = await page.evaluateHandle(() => {
       const transfer = new DataTransfer();
       transfer.items.add(new File(['safe attachment'], 'release-evidence.txt', { type: 'text/plain' }));
@@ -169,11 +267,11 @@ test.describe.serial('standalone native terminal', () => {
     await expect(page.getByRole('navigation', { name: 'Terminal views' })).toBeVisible();
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
     const undersizedPaneActions = await page
-      .locator('.terminal-pane-toolbar button:visible')
+      .locator('.terminal-actions button:visible')
       .evaluateAll((buttons) =>
         buttons.filter((button) => {
           const bounds = button.getBoundingClientRect();
-          return bounds.width < 44 || bounds.height < 44;
+          return bounds.width < 40 || bounds.height < 40;
         }).length,
       );
     expect(undersizedPaneActions).toBe(0);
@@ -182,6 +280,53 @@ test.describe.serial('standalone native terminal', () => {
       animations: 'disabled',
     });
     await page.setViewportSize({ width: 1440, height: 900 });
+
+    const touchContext = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    try {
+      const touchPage = await touchContext.newPage();
+      await touchPage.goto(
+        `/?workspace=${encodeURIComponent(workspaceId)}&session=${encodeURIComponent(primary)}`,
+      );
+      await expect(touchPage.getByLabel('Terminal connection: live')).toBeVisible();
+      const undersizedTouchActions = await touchPage
+        .locator('.terminal-actions button:visible')
+        .evaluateAll((buttons) =>
+          buttons.filter((button) => {
+            const bounds = button.getBoundingClientRect();
+            return bounds.width < 44 || bounds.height < 44;
+          }).length,
+        );
+      expect(undersizedTouchActions).toBe(0);
+    } finally {
+      await touchContext.close();
+    }
+
+    const primaryPane = page.locator('.terminal-pane').filter({ hasText: primary });
+    await page.route(
+      `**/terminal/v1/workspaces/${workspaceId}/sessions/${primary}`,
+      async (route) => {
+        if (route.request().method() === 'DELETE') {
+          await route.fulfill({
+            status: 503,
+            contentType: 'application/json',
+            body: JSON.stringify({ detail: 'close refused' }),
+          });
+          return;
+        }
+        await route.continue();
+      },
+    );
+    page.once('dialog', (dialog) => dialog.accept());
+    await primaryPane.getByTitle('Close session').click();
+    await expect(primaryPane.getByRole('alert')).toBeVisible();
+    await expect(primaryPane.getByRole('alert')).toContainText('close refused');
+    expect((await inventory(request)).sessions.map((session) => session.name)).toContain(primary);
+    await page.unroute(
+      `**/terminal/v1/workspaces/${workspaceId}/sessions/${primary}`,
+    );
 
     page.once('dialog', (dialog) => dialog.accept());
     await page

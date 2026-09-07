@@ -41,6 +41,16 @@ function initialQueryTarget() {
   };
 }
 
+function workspaceStorageKey() {
+  const target = initialQueryTarget();
+  if (!target.projectId && !target.sessionName) return undefined;
+  return [
+    'dolphin.terminal.workspace.tab.v2',
+    encodeURIComponent(target.projectId ?? ''),
+    encodeURIComponent(target.sessionName ?? ''),
+  ].join(':');
+}
+
 function useNarrowLayout() {
   const [narrow, setNarrow] = useState(() =>
     window.matchMedia('(max-width: 820px)').matches,
@@ -57,9 +67,11 @@ function useNarrowLayout() {
 function StandaloneTerminal({
   capabilities,
   client,
+  storageKey,
 }: {
   capabilities: TerminalCapabilities;
   client: TerminalHttpClient;
+  storageKey: string | undefined;
 }) {
   const dictation = useTerminalDictation();
   const queryTarget = useMemo(initialQueryTarget, []);
@@ -136,6 +148,7 @@ function StandaloneTerminal({
         newSession: 'New session',
         persistentEngine: 'session backend',
       }}
+      storageKey={storageKey}
       targetHref={targetHref}
     >
       <main className="standalone-shell dolphin-terminal-theme">
@@ -190,6 +203,7 @@ export default function App() {
     () => createTerminalDictationHttpClient(gatewayUrl),
     [],
   );
+  const storageKey = useMemo(workspaceStorageKey, []);
   const [capabilities, setCapabilities] = useState<TerminalCapabilities>(
     disabledCapabilities,
   );
@@ -211,7 +225,11 @@ export default function App() {
       client={dictationClient}
       enabled={capabilities.dictation.enabled}
     >
-      <StandaloneTerminal capabilities={capabilities} client={client} />
+      <StandaloneTerminal
+        capabilities={capabilities}
+        client={client}
+        storageKey={storageKey}
+      />
     </TerminalDictationProvider>
   );
 }

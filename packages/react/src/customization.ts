@@ -7,6 +7,7 @@ import {
   Brain,
   Check,
   CheckCircle2,
+  Copy,
   ChevronsUpDown,
   CirclePause,
   ExternalLink,
@@ -46,6 +47,7 @@ export interface TerminalIconRegistry {
   Brain: LucideIcon;
   Check: LucideIcon;
   CheckCircle2: LucideIcon;
+  Copy: LucideIcon;
   ChevronsUpDown: LucideIcon;
   CirclePause: LucideIcon;
   ExternalLink: LucideIcon;
@@ -88,6 +90,7 @@ export const defaultTerminalIcons: TerminalIconRegistry = {
   Brain,
   Check,
   CheckCircle2,
+  Copy,
   ChevronsUpDown,
   CirclePause,
   ExternalLink,

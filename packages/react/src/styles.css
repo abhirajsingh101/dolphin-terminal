@@ -1806,6 +1806,7 @@
 }
 
 .terminal-toolbar {
+  position: relative;
   display: flex;
   min-height: 42px;
   align-items: center;
@@ -1911,12 +1912,64 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--term-live-text) 12%, transparent);
 }
 
+.terminal-connection-notice,
+.terminal-operation-notice {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 280px;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--term-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-operation-notice {
+  color: var(--term-error-text);
+}
+
+/* Mutating a persistent session is consequential, so an API rejection must
+   never flex down to a zero-width toolbar child. Render it as a contained
+   notice over the terminal body; the pane clips it to its own boundary. */
+.terminal-operation-notice {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 8px;
+  z-index: 20;
+  max-width: min(360px, calc(100% - 16px));
+  padding: 7px 9px;
+  border: 1px solid var(--term-error-text);
+  border-radius: var(--r-sm);
+  background: var(--term-surface);
+  box-shadow: 0 8px 24px color-mix(in srgb, black 35%, transparent);
+  white-space: normal;
+}
+
+.terminal-actions .terminal-retry-button {
+  display: inline-grid;
+  width: auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--term-border);
+  background: var(--term-hover);
+  color: var(--term-text);
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .terminal-host {
   position: relative;
   min-height: 0;
   flex: 1;
   overflow: hidden;
   padding: 8px;
+}
+
+.terminal-attachment-input {
+  display: none;
 }
 
 .terminal-attachment-drop-overlay {

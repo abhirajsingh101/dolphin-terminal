@@ -1,6 +1,16 @@
 export const MAX_TERMINAL_ATTACHMENT_FILES = 4;
 export const MAX_TERMINAL_ATTACHMENT_BYTES = 600 * 1024 * 1024;
 
+export function terminalAttachmentLimitLabel(maxBytes: number): string {
+  if (maxBytes >= 1024 * 1024 && maxBytes % (1024 * 1024) === 0) {
+    return `${maxBytes / (1024 * 1024)} MiB`;
+  }
+  if (maxBytes >= 1024 && maxBytes % 1024 === 0) {
+    return `${maxBytes / 1024} KiB`;
+  }
+  return `${maxBytes} bytes`;
+}
+
 export type TerminalAttachmentKind = 'file' | 'image';
 
 export interface SelectedTerminalAttachment {
@@ -51,6 +61,7 @@ function hasSafeAttachmentName(name: string): boolean {
 
 export function selectTerminalAttachments(
   files: ArrayLike<File> | Iterable<File>,
+  maxBytes = MAX_TERMINAL_ATTACHMENT_BYTES,
 ): TerminalAttachmentSelection {
   const accepted: SelectedTerminalAttachment[] = [];
   const errors: string[] = [];
@@ -70,8 +81,10 @@ export function selectTerminalAttachments(
       errors.push(`${file.name}: the file is empty.`);
       continue;
     }
-    if (file.size > MAX_TERMINAL_ATTACHMENT_BYTES) {
-      errors.push(`${file.name}: files must be 600 MiB or smaller.`);
+    if (file.size > maxBytes) {
+      errors.push(
+        `${file.name}: files must be ${terminalAttachmentLimitLabel(maxBytes)} or smaller.`,
+      );
       continue;
     }
 

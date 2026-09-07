@@ -309,6 +309,8 @@ export interface TerminalTarget {
 export interface TerminalRuntimeOptions {
   client: TerminalClient;
   dictation?: TerminalDictationBridge;
+  /** Maximum file size accepted by the active provider. Defaults to 600 MiB. */
+  maxAttachmentBytes?: number;
   targetHref?: (target: TerminalTarget) => string;
   storage?: Storage;
   storageKey?: string;

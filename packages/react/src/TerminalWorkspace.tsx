@@ -230,6 +230,8 @@ export interface TerminalWorkspaceProps {
   primaryProject: Project;
   primaryWorkspace: WorkspaceStatus;
   selectedSession: TerminalSession | null;
+  /** Increment to re-assert the controlled target after a rejected host transition. */
+  selectedTargetRevision?: number;
   isNarrowLayout: boolean;
   onActiveTargetChange: (projectId: string, sessionName: string) => void;
   onCreateSession: (projectId: string, name?: string) => Promise<TerminalSession>;
@@ -539,7 +541,7 @@ function TerminalSessionLauncher({
             setNameDraft(target.session.name);
             setRenameError(null);
           }}
-          pattern="[A-Za-z0-9_.-]+"
+          pattern="[A-Za-z0-9_.\-]+"
           ref={renameInputRef}
           spellCheck={false}
           title="Letters, numbers, dots, dashes, and underscores only"
@@ -724,7 +726,7 @@ function TerminalSessionCreator({
           setNameDraft('');
           setCreateError(null);
         }}
-        pattern="[A-Za-z0-9_.-]*"
+        pattern="[A-Za-z0-9_.\-]*"
         placeholder="Name (optional)"
         ref={inputRef}
         spellCheck={false}
@@ -995,6 +997,7 @@ export default function TerminalWorkspace({
   primaryProject,
   primaryWorkspace,
   selectedSession,
+  selectedTargetRevision,
   isNarrowLayout,
   onActiveTargetChange,
   onCreateSession,
@@ -1041,12 +1044,16 @@ export default function TerminalWorkspace({
   );
   const [fullscreenPaneId, setFullscreenPaneId] = useState<string | null>(null);
   const workspaceCacheRef = useRef(workspaceCache);
+  const dockProjectIdRef = useRef(dockProjectId);
+  const mountedRef = useRef(true);
   const activeTargetChangeRef = useRef(onActiveTargetChange);
   const notifiedActiveTargetRef = useRef('');
   const pendingLoadsRef = useRef(new Map<string, Promise<WorkspaceStatus>>());
-  const requestedTargetRef = useRef(
-    `${primaryProject.id}:${selectedSession?.name ?? ''}`,
-  );
+  // A persisted split tree may have a different active tab from the host's
+  // route. Start unacknowledged so the controlled target wins on mount while
+  // the rest of the restored layout remains intact.
+  const requestedTargetRef = useRef('');
+  const requestedTargetRevisionRef = useRef(selectedTargetRevision);
   const projectSelectRef = useRef<HTMLSelectElement>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 7 } }),
@@ -1063,7 +1070,15 @@ export default function TerminalWorkspace({
   );
 
   workspaceCacheRef.current = workspaceCache;
+  dockProjectIdRef.current = dockProjectId;
   activeTargetChangeRef.current = onActiveTargetChange;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setWorkspaceCache((current) => ({
@@ -1140,6 +1155,8 @@ export default function TerminalWorkspace({
   const activePane =
     findTerminalPane(workspaceState.root, workspaceState.activePaneId) ?? panes[0];
   const activeTab = activeTerminalTab(activePane);
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
 
   useEffect(() => {
     if (!activeTab) return;
@@ -1175,7 +1192,15 @@ export default function TerminalWorkspace({
 
   useEffect(() => {
     const key = `${primaryProject.id}:${selectedSession?.name ?? ''}`;
-    if (!selectedSession || requestedTargetRef.current === key) return;
+    const revisionChanged =
+      requestedTargetRevisionRef.current !== selectedTargetRevision;
+    requestedTargetRevisionRef.current = selectedTargetRevision;
+    if (
+      !selectedSession ||
+      (!revisionChanged && requestedTargetRef.current === key)
+    ) {
+      return;
+    }
     requestedTargetRef.current = key;
     setWorkspaceState((current) => {
       const existing = findTerminalTabByTarget(
@@ -1197,7 +1222,7 @@ export default function TerminalWorkspace({
             selectedSession.name,
           );
     });
-  }, [primaryProject.id, selectedSession]);
+  }, [primaryProject.id, selectedSession, selectedTargetRevision]);
 
   const activatePane = useCallback(
     (pane: TerminalWorkspacePane) => {
@@ -1276,6 +1301,32 @@ export default function TerminalWorkspace({
   async function refreshPaneProject(projectId: string) {
     await loadWorkspace(projectId, true);
     if (projectId === primaryProject.id) await onRefreshPrimaryProject();
+  }
+
+  function reportWorkspaceError(reason: unknown) {
+    setDockError(
+      reason instanceof Error
+        ? reason.message
+        : `Dolphin Terminal could not refresh these ${labels.sessions}.`,
+    );
+  }
+
+  function removeCachedSession(projectId: string, sessionName: string) {
+    setWorkspaceCache((current) => {
+      const projectWorkspace = current[projectId];
+      if (!projectWorkspace) return current;
+      const sessions = projectWorkspace.sessions.filter(
+        (session) => session.name !== sessionName,
+      );
+      return {
+        ...current,
+        [projectId]: {
+          ...projectWorkspace,
+          session_count: sessions.length,
+          sessions,
+        },
+      };
+    });
   }
 
   function sessionForPane(pane: TerminalWorkspacePane): TerminalSession | null {
@@ -1395,6 +1446,7 @@ export default function TerminalWorkspace({
                 },
               }}
               onSessionClosed={() => {
+                removeCachedSession(tab.projectId, tab.sessionName);
                 setWorkspaceState((current) =>
                   closeTerminalTab(
                     current,
@@ -1403,10 +1455,11 @@ export default function TerminalWorkspace({
                     tab.sessionName,
                   ),
                 );
-                void refreshPaneProject(tab.projectId);
+                void refreshPaneProject(tab.projectId).catch(reportWorkspaceError);
               }}
               onSessionChanged={() => {
-                void refreshPaneProject(tab.projectId);
+                setDockError(null);
+                void refreshPaneProject(tab.projectId).catch(reportWorkspaceError);
               }}
             />
           </Suspense>
@@ -1570,8 +1623,21 @@ export default function TerminalWorkspace({
   }
 
   async function createDockSession(project: Project, name?: string) {
+    const startedActiveTarget = activeTabRef.current
+      ? `${activeTabRef.current.projectId}:${activeTabRef.current.sessionName}`
+      : '';
     const created = await onCreateSession(project.id, name);
+    if (!mountedRef.current) return;
     cacheSession(project.id, created);
+    const currentActiveTarget = activeTabRef.current
+      ? `${activeTabRef.current.projectId}:${activeTabRef.current.sessionName}`
+      : '';
+    if (
+      dockProjectIdRef.current !== project.id ||
+      currentActiveTarget !== startedActiveTarget
+    ) {
+      return;
+    }
     placeTarget(
       {
         projectId: project.id,
@@ -1589,6 +1655,7 @@ export default function TerminalWorkspace({
       target.session,
       name,
     );
+    if (!mountedRef.current) return;
     setWorkspaceCache((current) => {
       const projectWorkspace = current[target.projectId];
       if (!projectWorkspace) return current;
@@ -1610,9 +1677,10 @@ export default function TerminalWorkspace({
         renamed.name,
       ),
     );
+    const currentActiveTab = activeTabRef.current;
     if (
-      activeTab?.projectId === target.projectId &&
-      activeTab.sessionName === target.session.name
+      currentActiveTab?.projectId === target.projectId &&
+      currentActiveTab.sessionName === target.session.name
     ) {
       onActiveTargetChange(target.projectId, renamed.name);
     }

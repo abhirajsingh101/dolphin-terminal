@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import '@xterm/xterm/css/xterm.css';
 import {
+  type ChangeEvent,
   type DragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
@@ -47,6 +48,7 @@ import {
   isFileDrag,
   sameTerminalAttachmentTarget,
   selectTerminalAttachments,
+  terminalAttachmentLimitLabel,
   terminalAttachmentAgent,
   terminalAttachmentAgentLabel,
   type TerminalAttachmentTargetIdentity,
@@ -215,6 +217,7 @@ type AttachmentTransferState = {
   kind: 'idle' | 'uploading' | 'success' | 'error';
   message: string;
 };
+type CopyState = 'idle' | 'copied' | 'failed';
 const ATTACHMENT_SUCCESS_NOTICE_MS = 3_000;
 type CopyLayerScrollAnchor = {
   rowsFromBottom: number;
@@ -325,16 +328,20 @@ export default function TerminalPane({
     automation,
     client,
     icons: {
+      CheckCircle2,
+      Copy,
       Maximize2,
       Minimize2,
       Paperclip,
       Power,
       RefreshCw,
+      Square,
       TerminalSquare,
       TextSelect,
       X,
     },
     labels,
+    maxAttachmentBytes,
     slots,
   } = useTerminalRuntime();
   const { activateTarget, clearTarget } = useDictation();
@@ -350,6 +357,7 @@ export default function TerminalPane({
   const webglRef = useRef<WebglAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const copyLayerRef = useRef<HTMLPreElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const terminalTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const focusActiveTabAfterCloseRef = useRef(false);
   const pendingFitFrameRef = useRef<number | null>(null);
@@ -376,6 +384,9 @@ export default function TerminalPane({
   const [resolvedPaths, setResolvedPaths] =
     useState<ReadonlyMap<string, TerminalPathResolution>>(EMPTY_RESOLVED_PATHS);
   const resolveRequestRef = useRef(0);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<CopyState>('idle');
+  const [operationNotice, setOperationNotice] = useState('');
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const lastUpdateFlushRef = useRef(0);
   const workspaceTabLayoutKey =
@@ -585,7 +596,9 @@ export default function TerminalPane({
         (event.ctrlKey || event.metaKey) &&
         (!event.altKey || event.shiftKey);
       if (event.type === 'keydown' && isCopyKey && terminal.hasSelection()) {
-        void copyTextToClipboard(terminal.getSelection()).catch(() => undefined);
+        void copyTextToClipboard(terminal.getSelection())
+          .then(() => setCopyStatus('copied'))
+          .catch(() => setCopyStatus('failed'));
         return false;
       }
       return true;
@@ -849,6 +862,35 @@ export default function TerminalPane({
   }, [isSelectMode, selectionSnapshot]);
 
   useEffect(() => {
+    if (copyStatus === 'idle') return undefined;
+    const timeout = window.setTimeout(() => setCopyStatus('idle'), 1_400);
+    return () => window.clearTimeout(timeout);
+  }, [copyStatus]);
+
+  useEffect(() => {
+    if (!isSelectMode) {
+      setHasSelection(terminalRef.current?.hasSelection() ?? false);
+      return undefined;
+    }
+
+    function updateNativeSelection() {
+      const selection = window.getSelection();
+      const copyLayer = copyLayerRef.current;
+      const isInsideCopyLayer =
+        !!copyLayer &&
+        !!selection?.anchorNode &&
+        !!selection.focusNode &&
+        copyLayer.contains(selection.anchorNode) &&
+        copyLayer.contains(selection.focusNode);
+      setHasSelection(isInsideCopyLayer && !selection.isCollapsed);
+    }
+
+    document.addEventListener('selectionchange', updateNativeSelection);
+    updateNativeSelection();
+    return () => document.removeEventListener('selectionchange', updateNativeSelection);
+  }, [isSelectMode]);
+
+  useEffect(() => {
     if (!isFullscreen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -885,6 +927,9 @@ export default function TerminalPane({
     setIsSelectMode(false);
     setSelectionSnapshot('');
     setResolvedPaths(EMPTY_RESOLVED_PATHS);
+    setHasSelection(false);
+    setCopyStatus('idle');
+    setOperationNotice('');
     copyLayerScrollAnchorRef.current = null;
     pendingCopyLayerScrollRestoresRef.current = 0;
     copyLayerInteractedRef.current = false;
@@ -1104,7 +1149,7 @@ export default function TerminalPane({
       return;
     }
 
-    const selection = selectTerminalAttachments(files);
+    const selection = selectTerminalAttachments(files, maxAttachmentBytes);
     if (selection.accepted.length === 0) {
       setAttachmentTransfer({
         kind: 'error',
@@ -1223,6 +1268,12 @@ export default function TerminalPane({
     void handleAttachmentFiles(event.dataTransfer.files);
   }
 
+  function handleAttachmentInput(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.currentTarget.files;
+    if (files?.length) void handleAttachmentFiles(files);
+    event.currentTarget.value = '';
+  }
+
   async function toggleSelectMode() {
     const terminal = terminalRef.current;
     if (isSelectMode) {
@@ -1231,6 +1282,7 @@ export default function TerminalPane({
       setIsSelectMode(false);
       setSelectionSnapshot('');
       setResolvedPaths(EMPTY_RESOLVED_PATHS);
+      setHasSelection(terminal?.hasSelection() ?? false);
       copyLayerScrollAnchorRef.current = null;
       pendingCopyLayerScrollRestoresRef.current = 0;
       copyLayerInteractedRef.current = false;
@@ -1246,6 +1298,7 @@ export default function TerminalPane({
     const requestId = snapshotRequestRef.current + 1;
     snapshotRequestRef.current = requestId;
     setSelectionSnapshot(fallbackText);
+    setHasSelection(false);
     setIsSelectMode(true);
 
     if (!session) return;
@@ -1289,12 +1342,34 @@ export default function TerminalPane({
     event.preventDefault();
   }
 
+  async function copySelection() {
+    const text = isSelectMode
+      ? window.getSelection()?.toString()
+      : terminalRef.current?.getSelection();
+    if (!text) return;
+    try {
+      await copyTextToClipboard(text);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('failed');
+    }
+  }
+
   async function handleClose() {
     if (!session) return;
     const ok = window.confirm(`Close ${labels.session} "${session.name}"?`);
     if (!ok) return;
-    await closeSession(projectId, session.name);
-    onSessionClosed();
+    setOperationNotice('');
+    try {
+      await closeSession(projectId, session.name);
+      onSessionClosed();
+    } catch (reason) {
+      setOperationNotice(
+        reason instanceof Error
+          ? reason.message
+          : `Could not close ${labels.session} "${session.name}".`,
+      );
+    }
   }
 
   function handleRetryConnection() {
@@ -1403,9 +1478,8 @@ export default function TerminalPane({
             </div>
           </div>
         )}
-        {/* Keep only frequent pane actions here. Attachments remain available
-            by drag and drop, selection uses the platform copy shortcut, and
-            interrupting a process remains a terminal keyboard action. */}
+        {/* Keep frequent pane actions explicit so pointer and touch users have
+            the same copy and interrupt controls as keyboard users. */}
         <div className="terminal-actions">
           <span
             aria-label={`Terminal connection: ${connection}`}
@@ -1413,6 +1487,25 @@ export default function TerminalPane({
             role="status"
             title={`Terminal connection: ${connection}`}
           />
+          {connectionNotice ? (
+            <span className="terminal-connection-notice" role="status">
+              {connectionNotice}
+              {connection === 'offline' ? (
+                <button
+                  className="terminal-retry-button"
+                  onClick={handleRetryConnection}
+                  type="button"
+                >
+                  Retry
+                </button>
+              ) : null}
+            </span>
+          ) : null}
+          {operationNotice ? (
+            <span className="terminal-operation-notice" role="alert">
+              {operationNotice}
+            </span>
+          ) : null}
           {lastUpdate ? (
             <span className="terminal-updated">
               Updated {new Date(lastUpdate).toLocaleTimeString()}
@@ -1445,6 +1538,28 @@ export default function TerminalPane({
               })
             : null}
           <div className="terminal-action-group">
+            <input
+              aria-hidden="true"
+              className="terminal-attachment-input"
+              multiple
+              onChange={handleAttachmentInput}
+              ref={attachmentInputRef}
+              tabIndex={-1}
+              type="file"
+            />
+            <button
+              aria-label={`Attach files or images to ${
+                activeAttachmentAgentLabel ?? 'this terminal'
+              }`}
+              disabled={!canAttachFiles}
+              onClick={() => attachmentInputRef.current?.click()}
+              title={`Attach files or images to ${
+                activeAttachmentAgentLabel ?? 'this terminal'
+              }`}
+              type="button"
+            >
+              <Paperclip aria-hidden="true" size={16} />
+            </button>
             <button
               type="button"
               aria-pressed={isSelectMode}
@@ -1458,8 +1573,34 @@ export default function TerminalPane({
             >
               <TextSelect size={16} />
             </button>
+            <button
+              disabled={!hasSelection}
+              onClick={copySelection}
+              title={
+                copyStatus === 'copied'
+                  ? 'Copied'
+                  : copyStatus === 'failed'
+                    ? 'Copy failed'
+                    : 'Copy selection'
+              }
+              type="button"
+            >
+              {copyStatus === 'copied' ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <Copy size={16} />
+              )}
+            </button>
           </div>
           <div className="terminal-action-group">
+            <button
+              disabled={!session}
+              onClick={() => sendToTerminal('\x03')}
+              title="Send Ctrl-C"
+              type="button"
+            >
+              <Square size={16} />
+            </button>
             <button
               type="button"
               aria-pressed={isFullscreen}
@@ -1532,7 +1673,7 @@ export default function TerminalPane({
             </strong>
             <span>
               {canAttachFiles
-                ? 'Up to 4 files · 600 MiB each · PNG/JPEG images sanitized'
+                ? `Up to 4 files · ${terminalAttachmentLimitLabel(maxAttachmentBytes)} each · PNG/JPEG images sanitized`
                 : attachmentUnavailableMessage()}
             </span>
           </div>

@@ -105,7 +105,7 @@
     "ST-PACKAGE": {
       "repository": "standalone",
       "files": ["scripts/package-check", "scripts/install-artifact-check", "Dockerfile"],
-      "command": "./scripts/package-check && ./scripts/build-release && ./scripts/install-artifact-check && docker build -t dolphin-terminal:0.3.0-local .",
+      "command": "./scripts/package-check && ./scripts/build-release && ./scripts/install-artifact-check && docker build -t dolphin-terminal:0.3.3-local .",
       "scope": "npm/Python artifact contents, clean wheel and npm tarball installs, embedded UI/native daemon, neutral release content, tmux-free default, and runnable container doctor."
     },
     "ST-HOST-BOUNDARY": {

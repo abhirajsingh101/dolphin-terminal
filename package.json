@@ -1,6 +1,6 @@
 {
   "name": "dolphin-terminal-monorepo",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "A standalone, embeddable terminal workspace for humans and AI agents",
   "private": true,
   "license": "Apache-2.0",

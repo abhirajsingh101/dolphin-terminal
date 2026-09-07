@@ -12,6 +12,7 @@ import type {
   TerminalTarget,
   TerminalRuntimeLabels,
 } from '@dolphin-terminal/protocol';
+import { MAX_TERMINAL_ATTACHMENT_BYTES } from '@dolphin-terminal/core';
 import {
   defaultTerminalIcons,
   type TerminalIconRegistry,
@@ -40,6 +41,7 @@ export interface TerminalRuntimeValue extends TerminalRuntimeOptions {
   automation: boolean;
   icons: TerminalIconRegistry;
   labels: TerminalRuntimeLabels;
+  maxAttachmentBytes: number;
   portalRoot: HTMLElement | null;
   slots: TerminalRuntimeSlots;
 }
@@ -59,6 +61,12 @@ function defaultTargetHref(target: TerminalTarget): string {
   url.searchParams.set('workspace', target.projectId);
   url.searchParams.set('session', target.sessionName);
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function resolvedAttachmentLimit(value: number | undefined): number {
+  return value !== undefined && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : MAX_TERMINAL_ATTACHMENT_BYTES;
 }
 
 export function TerminalRuntimeProvider({
@@ -82,6 +90,7 @@ export function TerminalRuntimeProvider({
       automation: options.automation ?? true,
       icons: { ...defaultTerminalIcons, ...options.icons },
       labels: { ...defaultLabels, ...options.labels },
+      maxAttachmentBytes: resolvedAttachmentLimit(options.maxAttachmentBytes),
       portalRoot:
         options.portalRoot === undefined
           ? typeof document === 'undefined'

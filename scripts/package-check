@@ -43,7 +43,7 @@ assert {item["name"] for item in npm_report} == {
     "@dolphin-terminal/core",
     "@dolphin-terminal/react",
 }
-assert {item["version"] for item in npm_report} == {"0.3.0"}
+assert {item["version"] for item in npm_report} == {"0.3.3"}
 assert all(
     any(file["path"] == "LICENSE" for file in item["files"])
     for item in npm_report
