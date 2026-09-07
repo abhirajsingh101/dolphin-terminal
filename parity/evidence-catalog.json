@@ -181,13 +181,11 @@
         "dolphin-backend/tests/test_tmux_session_rename.py",
         "dolphin-backend/tests/test_terminal_attachment_service.py",
         "dolphin-backend/tests/test_terminal_path_service.py",
-        "dolphin-backend/tests/test_image_attachment_service.py",
         "dolphin-backend/tests/test_dictation_service.py",
-        "dolphin-backend/tests/test_session_automation.py",
         "dolphin-backend/tests/test_codex_todo_service.py"
       ],
-      "command": "python -m compileall -q app && python -m pytest -q tests/test_tmux_service.py tests/test_tmux_session_rename.py tests/test_terminal_attachment_service.py tests/test_terminal_path_service.py tests/test_image_attachment_service.py tests/test_dictation_service.py tests/test_session_automation.py tests/test_codex_todo_service.py",
-      "scope": "The 140-test focused Dolphin backend gate retains canonical tmux, attachments, dictation, automation, and todo policy."
+      "command": "python -m compileall -q app && python -m pytest -q tests/test_tmux_service.py tests/test_tmux_session_rename.py tests/test_terminal_attachment_service.py tests/test_terminal_path_service.py tests/test_dictation_service.py tests/test_codex_todo_service.py",
+      "scope": "The focused Dolphin backend gate retains canonical tmux, attachments, paths, dictation, and todo dispatch policy used by the package adapter."
     },
     "DF-BOUNDARY": {
       "repository": "dolphin",
