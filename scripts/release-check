@@ -4,8 +4,14 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 
+if [[ -z "${DOLPHIN_TERMINAL_CANDIDATE_SHA:-}" ]]; then
+  echo "DOLPHIN_TERMINAL_CANDIDATE_SHA must name the externally reviewed release commit" >&2
+  exit 1
+fi
+
 ./scripts/check
-npm run check:parity:dolphin
+DOLPHIN_TERMINAL_CANDIDATE_SHA="$DOLPHIN_TERMINAL_CANDIDATE_SHA" \
+  npm run check:parity:dolphin
 ./scripts/security-check
 ./scripts/build-release
 ./scripts/install-artifact-check

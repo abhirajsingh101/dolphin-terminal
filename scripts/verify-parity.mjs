@@ -5,11 +5,18 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  exactCleanCandidateFailures,
+  requiredExactCleanCandidateFailures,
+} from './parityCandidateBinding.mjs';
+
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dolphinRoot = resolve(
   process.env.DOLPHIN_TASKS_ROOT ?? resolve(projectRoot, '..', 'dolphin-tasks'),
 );
 const requireDolphin = process.argv.includes('--require-dolphin');
+const expectedStandaloneCandidate =
+  process.env.DOLPHIN_TERMINAL_CANDIDATE_SHA;
 const dolphinAvailable = existsSync(resolve(dolphinRoot, 'dolphin-web'));
 const ledger = JSON.parse(readFileSync(resolve(projectRoot, 'parity/features.json'), 'utf8'));
 const catalog = JSON.parse(
@@ -75,16 +82,26 @@ if (!commitExists(projectRoot, snapshot.standalone_implementation_commit)) {
 ) {
   fail('standalone implementation commit is not an ancestor of the release candidate');
 }
+if (requireDolphin) {
+  for (const bindingFailure of requiredExactCleanCandidateFailures(
+    projectRoot,
+    expectedStandaloneCandidate,
+  )) {
+    fail(`standalone release candidate binding failed: ${bindingFailure}`);
+  }
+}
 if (
   dolphinAvailable &&
   !commitExists(dolphinRoot, snapshot.dolphin_candidate_commit)
 ) {
   fail('verification snapshot lacks a reachable Dolphin candidate commit');
-} else if (
-  dolphinAvailable &&
-  !commitIsAncestorOfHead(dolphinRoot, snapshot.dolphin_candidate_commit)
-) {
-  fail('Dolphin candidate commit is not an ancestor of the supplied checkout');
+} else if (dolphinAvailable) {
+  for (const bindingFailure of exactCleanCandidateFailures(
+    dolphinRoot,
+    snapshot.dolphin_candidate_commit,
+  )) {
+    fail(`Dolphin candidate binding failed: ${bindingFailure}`);
+  }
 }
 if (snapshot.publication_status_at_verification !== 'not-performed') {
   fail('verification snapshot must describe the pre-publication release gate');

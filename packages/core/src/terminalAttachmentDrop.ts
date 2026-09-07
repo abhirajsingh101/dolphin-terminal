@@ -1,5 +1,20 @@
 export const MAX_TERMINAL_ATTACHMENT_FILES = 4;
 export const MAX_TERMINAL_ATTACHMENT_BYTES = 600 * 1024 * 1024;
+const MIN_UPLOAD_TIMEOUT_MS = 30_000;
+const CONSERVATIVE_UPLOAD_BYTES_PER_SECOND = 64 * 1024;
+
+/**
+ * Preserve stalled-request recovery without making the advertised large-file
+ * limit depend on a fast connection. The allowance scales to roughly 0.5 Mbps
+ * and always includes a 30-second setup margin.
+ */
+export function terminalAttachmentUploadTimeoutMs(fileSize: number): number {
+  const safeSize = Number.isFinite(fileSize) && fileSize > 0 ? fileSize : 0;
+  return (
+    MIN_UPLOAD_TIMEOUT_MS +
+    Math.ceil((safeSize * 1_000) / CONSERVATIVE_UPLOAD_BYTES_PER_SECOND)
+  );
+}
 
 export function terminalAttachmentLimitLabel(maxBytes: number): string {
   if (maxBytes >= 1024 * 1024 && maxBytes % (1024 * 1024) === 0) {

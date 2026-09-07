@@ -27,6 +27,7 @@ export default defineConfig({
     command: [
       'python -m dolphin_terminal serve',
       `dolphin-terminal=${projectRoot}`,
+      `dolphin-terminal-alt=${projectRoot}/packages`,
       '--port',
       String(port),
       '--session-backend native',

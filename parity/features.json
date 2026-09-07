@@ -15,7 +15,7 @@
   "features": [
     {
       "id": "DT-SESS-001",
-      "description": "Top dock remains the sole full session inventory and can switch among exact projects/workspaces.",
+      "description": "Top dock remains the sole full session inventory, can switch among exact projects/workspaces, and persistently hides or restores noisy sessions without terminating them.",
       "owner_package": "@dolphin-terminal/react",
       "original_source_refs": [
         "dolphin-web/src/TerminalWorkspace.tsx",

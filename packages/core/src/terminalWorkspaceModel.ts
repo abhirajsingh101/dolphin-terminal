@@ -317,6 +317,33 @@ export function closeTerminalTab(
   return root === state.root ? state : { ...state, root, activePaneId: paneId };
 }
 
+/**
+ * Reconcile a controlled host target that intentionally has no session.
+ * Other split panes remain intact, while the active pane becomes the empty
+ * launcher for the exact project instead of showing a stale foreign target.
+ */
+export function clearActiveTerminalTarget(
+  state: TerminalWorkspaceState,
+  preferredProjectId: string,
+): TerminalWorkspaceState {
+  const pane = findTerminalPane(state.root, state.activePaneId);
+  if (!pane) return state;
+  if (pane.tabs.length === 0 && pane.preferredProjectId === preferredProjectId) {
+    return state;
+  }
+  const root = updateNode(state.root, pane.id, (node) =>
+    node.type === 'terminal'
+      ? {
+          ...node,
+          preferredProjectId,
+          tabs: [],
+          activeTabIndex: 0,
+        }
+      : node,
+  );
+  return root === state.root ? state : { ...state, root };
+}
+
 function renameSessionTargetInNode(
   node: TerminalWorkspaceNode,
   projectId: string,

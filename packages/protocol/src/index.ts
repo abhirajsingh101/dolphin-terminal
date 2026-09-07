@@ -247,7 +247,8 @@ export interface TerminalCapabilities {
     available: boolean;
     detail: string;
   };
-  attachments: { max_bytes: number };
+  /** Optional for compatibility with pre-0.3.3 gateways and custom clients. */
+  attachments?: { max_bytes: number };
   dictation: { enabled: boolean };
   automation: { enabled: boolean };
 }

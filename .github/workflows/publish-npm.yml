@@ -27,7 +27,7 @@ jobs:
           package-manager-cache: false
       - run: npm install --global npm@latest
       - run: npm ci --no-audit
-      - run: npm run typecheck && npm test
+      - run: npm run typecheck && npm test && npm run build
       - name: Publish packages in dependency order
         run: |
           npm publish -w @dolphin-terminal/protocol

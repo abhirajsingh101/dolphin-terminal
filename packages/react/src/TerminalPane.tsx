@@ -51,6 +51,7 @@ import {
   terminalAttachmentLimitLabel,
   terminalAttachmentAgent,
   terminalAttachmentAgentLabel,
+  terminalAttachmentUploadTimeoutMs,
   type TerminalAttachmentTargetIdentity,
 } from './terminalAttachmentDrop.js';
 import type { TerminalPathResolution, TerminalSession } from './types.js';
@@ -68,6 +69,7 @@ export interface TerminalWorkspaceControls {
     projectEmoji: string;
     sessionName: string;
     isActive: boolean;
+    isSessionClosePending?: boolean;
   }>;
   isActive: boolean;
   isSplit: boolean;
@@ -120,6 +122,7 @@ function DraggableTerminalTab({
       projectEmoji: tab.projectEmoji,
       sessionName: tab.sessionName,
     },
+    disabled: tab.isSessionClosePending,
   });
   const before = useDroppable({
     id: `terminal-tab-insert:${paneId}:${index}:before`,
@@ -175,11 +178,16 @@ function DraggableTerminalTab({
       <button
         aria-label={`Close terminal tab ${tab.sessionName}`}
         className="terminal-pane-tab-close"
+        disabled={tab.isSessionClosePending}
         onClick={(event) => {
           event.stopPropagation();
           onClose();
         }}
-        title={`Close tab (${labels.persistentEngine} keeps running)`}
+        title={
+          tab.isSessionClosePending
+            ? `Closing ${labels.session}…`
+            : `Close tab (${labels.persistentEngine} keeps running)`
+        }
         type="button"
       >
         <X aria-hidden="true" size={13} />
@@ -199,6 +207,22 @@ export interface TerminalPaneProps {
   projectId: string;
   session: TerminalSession | null;
   onSessionClosed: () => void;
+  onSessionCloseError?: (
+    projectId: string,
+    sessionName: string,
+    reason: unknown,
+  ) => void;
+  /** Shared workspace guard that survives moving a tab between panes. */
+  sessionClosePending?: boolean;
+  onSessionCloseRequestStart?: (
+    projectId: string,
+    sessionName: string,
+  ) => boolean;
+  onSessionCloseRequestEnd?: (
+    projectId: string,
+    sessionName: string,
+    succeeded: boolean,
+  ) => void;
   onSessionChanged: () => void;
   dictationTargetId?: string;
   enableWebgl?: boolean;
@@ -325,6 +349,10 @@ export default function TerminalPane({
   projectId,
   session,
   onSessionClosed,
+  onSessionCloseError,
+  sessionClosePending = false,
+  onSessionCloseRequestStart,
+  onSessionCloseRequestEnd,
   onSessionChanged,
   dictationTargetId = 'dolphin-terminal-dictation-target',
   enableWebgl = true,
@@ -358,6 +386,7 @@ export default function TerminalPane({
   const uploadAttachment = client.uploadAttachment.bind(client);
   const workspaceFileDownloadUrl = client.fileDownloadUrl.bind(client);
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(true);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const webglRef = useRef<WebglAddon | null>(null);
@@ -379,6 +408,7 @@ export default function TerminalPane({
   const fullscreenChangeRef = useRef(workspaceControls?.onFullscreenChange);
   const fullscreenStateRef = useRef(false);
   const attachmentUploadAbortRef = useRef<AbortController | null>(null);
+  const closeRequestRef = useRef<string | null>(null);
   const [connection, setConnection] = useState<ConnectionState>('idle');
   const [connectionNotice, setConnectionNotice] = useState('');
   // Bumped by the Retry control to re-run the connection effect with a fresh
@@ -393,6 +423,7 @@ export default function TerminalPane({
   const [hasSelection, setHasSelection] = useState(false);
   const [copyStatus, setCopyStatus] = useState<CopyState>('idle');
   const [operationNotice, setOperationNotice] = useState('');
+  const [closingSessionKey, setClosingSessionKey] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const lastUpdateFlushRef = useRef(0);
   const workspaceTabLayoutKey =
@@ -411,6 +442,13 @@ export default function TerminalPane({
     },
     disabled: !workspaceControls,
   });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // A newly opened tab can land beyond the visible end of a compact tab strip.
   // Keep it in view, and return keyboard focus to the selected neighbor after
@@ -1178,7 +1216,13 @@ export default function TerminalPane({
       return;
     }
 
-    attachmentUploadAbortRef.current?.abort();
+    if (attachmentUploadAbortRef.current !== null) {
+      setAttachmentTransfer({
+        kind: 'error',
+        message: 'Wait for the current attachment upload to finish.',
+      });
+      return;
+    }
     const abortController = new AbortController();
     attachmentUploadAbortRef.current = abortController;
     let pastedCount = 0;
@@ -1189,17 +1233,32 @@ export default function TerminalPane({
         kind: 'uploading',
         message: `Uploading attachment ${index + 1} of ${selection.accepted.length}…`,
       });
+      let uploadTimeoutId: number | null = null;
+      let uploadTimedOut = false;
+      const uploadTimeoutMs = terminalAttachmentUploadTimeoutMs(
+        selectedAttachment.file.size,
+      );
       try {
-        const attachment = await uploadAttachment(
-          targetIdentity.projectId,
-          targetIdentity.sessionName,
-          selectedAttachment.file,
-          selectedAttachment.file.name,
-          selectedAttachment.contentType,
-          abortController.signal,
-        );
+        const attachment = await Promise.race([
+          uploadAttachment(
+            targetIdentity.projectId,
+            targetIdentity.sessionName,
+            selectedAttachment.file,
+            selectedAttachment.file.name,
+            selectedAttachment.contentType,
+            abortController.signal,
+          ),
+          new Promise<never>((_resolve, reject) => {
+            uploadTimeoutId = window.setTimeout(() => {
+              uploadTimedOut = true;
+              abortController.abort();
+              reject(new Error('attachment upload timed out'));
+            }, uploadTimeoutMs);
+          }),
+        ]);
         const currentIdentity = currentAttachmentTargetIdentity();
         const targetStillMatches =
+          attachmentUploadAbortRef.current === abortController &&
           currentIdentity !== null &&
           sameTerminalAttachmentTarget(targetIdentity, currentIdentity) &&
           terminalRef.current === targetTerminal &&
@@ -1220,7 +1279,9 @@ export default function TerminalPane({
       } catch (error) {
         if (abortController.signal.aborted) {
           errors.push(
-            `${selectedAttachment.file.name}: upload stopped because the terminal changed.`,
+            uploadTimedOut
+              ? `${selectedAttachment.file.name}: upload timed out. Retry when the connection is stable.`
+              : `${selectedAttachment.file.name}: upload stopped because the terminal changed.`,
           );
           break;
         }
@@ -1229,12 +1290,15 @@ export default function TerminalPane({
             error instanceof Error ? error.message : 'upload failed'
           }`,
         );
+      } finally {
+        if (uploadTimeoutId !== null) window.clearTimeout(uploadTimeoutId);
       }
     }
 
-    if (attachmentUploadAbortRef.current === abortController) {
-      attachmentUploadAbortRef.current = null;
-    }
+    // Starting another batch aborts this one. Its eventual rejection must not
+    // overwrite the newer batch's progress or success notice.
+    if (attachmentUploadAbortRef.current !== abortController) return;
+    attachmentUploadAbortRef.current = null;
     if (pastedCount === 0) {
       setAttachmentTransfer({
         kind: 'error',
@@ -1377,24 +1441,53 @@ export default function TerminalPane({
     if (!session) return;
     const closingProjectId = projectId;
     const closingSessionName = session.name;
+    const closingKey = `${closingProjectId}:${closingSessionName}`;
+    if (closeRequestRef.current !== null || sessionClosePending) return;
     const ok = window.confirm(`Close ${labels.session} "${closingSessionName}"?`);
     if (!ok) return;
+    if (
+      onSessionCloseRequestStart &&
+      !onSessionCloseRequestStart(closingProjectId, closingSessionName)
+    ) {
+      return;
+    }
+    closeRequestRef.current = closingKey;
+    setClosingSessionKey(closingKey);
     setOperationNotice('');
+    let succeeded = false;
     try {
       await closeSession(closingProjectId, closingSessionName);
+      succeeded = true;
       onSessionClosed();
     } catch (reason) {
-      if (
-        projectIdRef.current !== closingProjectId ||
-        sessionRef.current?.name !== closingSessionName
-      ) {
-        return;
-      }
-      setOperationNotice(
+      const message =
         reason instanceof Error
-          ? reason.message
-          : `Could not close ${labels.session} "${session.name}".`,
+          ? `Could not close ${labels.session} "${closingSessionName}": ${reason.message}`
+          : `Could not close ${labels.session} "${closingSessionName}".`;
+      onSessionCloseError?.(
+        closingProjectId,
+        closingSessionName,
+        new Error(message),
       );
+      if (
+        mountedRef.current &&
+        projectIdRef.current === closingProjectId &&
+        sessionRef.current?.name === closingSessionName
+      ) {
+        setOperationNotice(message);
+      } else if (!onSessionCloseError) {
+        setOperationNotice(message);
+      }
+    } finally {
+      onSessionCloseRequestEnd?.(
+        closingProjectId,
+        closingSessionName,
+        succeeded,
+      );
+      if (closeRequestRef.current === closingKey) {
+        closeRequestRef.current = null;
+        if (mountedRef.current) setClosingSessionKey(null);
+      }
     }
   }
 
@@ -1619,6 +1712,17 @@ export default function TerminalPane({
                 <Copy size={16} />
               )}
             </button>
+            <span
+              aria-live="polite"
+              className="terminal-sr-only"
+              role="status"
+            >
+              {copyStatus === 'copied'
+                ? 'Terminal selection copied.'
+                : copyStatus === 'failed'
+                  ? 'Terminal selection could not be copied.'
+                  : ''}
+            </span>
           </div>
           <div className="terminal-action-group">
             <button
@@ -1671,8 +1775,12 @@ export default function TerminalPane({
               className="terminal-action-danger"
               type="button"
               onClick={handleClose}
-              disabled={!session}
-              title="Close session"
+              disabled={!session || closingSessionKey !== null || sessionClosePending}
+              title={
+                closingSessionKey || sessionClosePending
+                  ? 'Closing session…'
+                  : 'Close session'
+              }
             >
               <Power size={16} />
             </button>

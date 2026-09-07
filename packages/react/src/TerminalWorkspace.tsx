@@ -43,6 +43,7 @@ import {
   activeTerminalTab,
   activateTerminalPane,
   activateTerminalTab,
+  clearActiveTerminalTarget,
   closeTerminalTab,
   collectTerminalPanes,
   createTerminalWorkspace,
@@ -69,6 +70,52 @@ const TAB_STORAGE_KEY = 'dolphin.terminal.workspace.tab.v2';
 const LEGACY_STORAGE_KEY = 'dolphin.terminal.workspace.v1';
 const LEGACY_MIGRATION_KEY = 'dolphin.terminal.workspace.tab-migration.v2';
 let generatedId = 0;
+
+interface PendingSessionCloseRegistry {
+  keys: Set<string>;
+  closedTargets: Map<string, { projectId: string; sessionName: string }>;
+  failedTargets: Map<
+    string,
+    { projectId: string; sessionName: string; message: string }
+  >;
+  listeners: Set<
+    (
+      keys: Set<string>,
+      closedTargets: Array<{ projectId: string; sessionName: string }>,
+      failedTargets: Array<{
+        projectId: string;
+        sessionName: string;
+        message: string;
+      }>,
+    ) => void
+  >;
+}
+
+const pendingSessionCloseRegistries = new WeakMap<
+  object,
+  PendingSessionCloseRegistry
+>();
+
+function pendingSessionCloseRegistry(client: object) {
+  const existing = pendingSessionCloseRegistries.get(client);
+  if (existing) return existing;
+  const created: PendingSessionCloseRegistry = {
+    keys: new Set(),
+    closedTargets: new Map(),
+    failedTargets: new Map(),
+    listeners: new Set(),
+  };
+  pendingSessionCloseRegistries.set(client, created);
+  return created;
+}
+
+function publishPendingSessionCloses(registry: PendingSessionCloseRegistry) {
+  const closedTargets = Array.from(registry.closedTargets.values());
+  const failedTargets = Array.from(registry.failedTargets.values());
+  for (const listener of registry.listeners) {
+    listener(new Set(registry.keys), closedTargets, failedTargets);
+  }
+}
 
 type TerminalPlacement = 'tab' | 'left' | 'right' | 'above' | 'below';
 
@@ -232,16 +279,49 @@ export interface TerminalWorkspaceProps {
   selectedSession: TerminalSession | null;
   /** Increment to re-assert the controlled target after a rejected host transition. */
   selectedTargetRevision?: number;
+  /** localStorage key for hidden sessions; pass a legacy host key to migrate in place. */
+  hiddenSessionsStorageKey?: string;
   isNarrowLayout: boolean;
   onActiveTargetChange: (projectId: string, sessionName: string) => void;
+  onActiveTargetCleared?: (projectId: string) => void;
   onCreateSession: (projectId: string, name?: string) => Promise<TerminalSession>;
   onPaneCountChange?: (paneCount: number) => void;
+  onPersistentSessionClosed?: (projectId: string, sessionName: string) => void;
   onRefreshPrimaryProject: () => Promise<void> | void;
   onRenameSession: (
     projectId: string,
     session: TerminalSession,
     name: string,
   ) => Promise<TerminalSession>;
+}
+
+function loadHiddenSessions(storageKey: string): Record<string, string[]> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([projectId, names]) =>
+        Array.isArray(names)
+          ? [[projectId, names.filter((name): name is string => typeof name === 'string')]]
+          : [],
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveHiddenSessions(
+  storageKey: string,
+  hiddenSessions: Record<string, string[]>,
+) {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(hiddenSessions));
+  } catch {
+    // This is a local display preference; unavailable storage must never make
+    // persistent sessions or their terminals unavailable.
+  }
 }
 
 interface NodeRendererProps {
@@ -329,12 +409,16 @@ function TerminalWorkspaceChild({
 function PlacementMenu({
   sessionName,
   canPlace,
+  disabled,
   newTabHref,
+  onHide,
   onPlace,
 }: {
   sessionName: string;
   canPlace: boolean;
+  disabled: boolean;
   newTabHref: string;
+  onHide: () => void;
   onPlace: (placement: TerminalPlacement) => void;
 }) {
   const {
@@ -344,6 +428,7 @@ function PlacementMenu({
       ArrowRight,
       ArrowUp,
       ExternalLink,
+      EyeOff,
       MoreHorizontal,
       Plus,
     },
@@ -353,6 +438,10 @@ function PlacementMenu({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
@@ -396,6 +485,7 @@ function PlacementMenu({
         aria-haspopup="menu"
         aria-label={`Placement options for ${sessionName}`}
         className="terminal-session-placement-trigger"
+        disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         ref={triggerRef}
         title="Split this session or open it in a new browser tab"
@@ -445,6 +535,17 @@ function PlacementMenu({
                 <ExternalLink aria-hidden="true" size={14} />
                 Open in new browser tab
               </a>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onHide();
+                }}
+                role="menuitem"
+                type="button"
+              >
+                <EyeOff aria-hidden="true" size={14} />
+                Hide from session bar
+              </button>
             </div>,
             portalRoot ?? document.body,
           )
@@ -456,16 +557,24 @@ function PlacementMenu({
 function TerminalSessionLauncher({
   target,
   openPaneId,
+  hidden = false,
+  sessionClosePending,
+  onHide,
   onOpen,
   onRename,
+  onRestore,
 }: {
   target: TerminalTarget;
   openPaneId: string | null;
+  hidden?: boolean;
+  sessionClosePending: boolean;
+  onHide: () => void;
   onOpen: (placement: TerminalPlacement) => void;
   onRename: (name: string) => Promise<void>;
+  onRestore: () => void;
 }) {
   const {
-    icons: { Bot, Check, Pencil, TerminalSquare, X },
+    icons: { Bot, Check, Eye, Pencil, TerminalSquare, X },
     labels,
     targetHref,
   } = useTerminalRuntime();
@@ -477,12 +586,15 @@ function TerminalSessionLauncher({
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `terminal-session:${target.projectId}:${target.session.name}`,
     data: { type: 'terminal-session', target },
-    disabled: openPaneId !== null || editing,
+    disabled: hidden || openPaneId !== null || editing || sessionClosePending,
   });
-  const action = openPaneId
+  const action = hidden
+    ? `Restore hidden ${target.projectName} session ${target.session.name}`
+    : openPaneId
     ? `Show ${target.projectName} session ${target.session.name} in its open tab`
     : `Open ${target.projectName} session ${target.session.name} as a tab in the active split`;
-  const canRename = target.session.rename_allowed !== false;
+  const canRename =
+    !sessionClosePending && target.session.rename_allowed !== false;
   const renameTitle = canRename
     ? `Rename ${labels.session}`
     : target.session.rename_block_reason ?? `This ${labels.session} cannot be renamed.`;
@@ -499,8 +611,16 @@ function TerminalSessionLauncher({
     });
   }, [editing]);
 
+  useEffect(() => {
+    if (!sessionClosePending) return;
+    setEditing(false);
+    setRenameBusy(false);
+    setRenameError(null);
+  }, [sessionClosePending]);
+
   async function submitRename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sessionClosePending) return;
     const requestedName = nameDraft.trim();
     if (!requestedName) {
       setRenameError('Enter a session name.');
@@ -580,6 +700,8 @@ function TerminalSessionLauncher({
   return (
     <div
       className={`terminal-session-launcher${openPaneId ? ' is-open' : ''}${
+        hidden ? ' is-hidden' : ''
+      }${
         isDragging ? ' is-dragging' : ''
       }`}
     >
@@ -589,12 +711,18 @@ function TerminalSessionLauncher({
         aria-disabled={undefined}
         aria-label={action}
         className="terminal-session-launcher-main"
+        disabled={sessionClosePending}
         onAuxClick={(event) => {
+          if (hidden) return;
           if (event.button !== 1) return;
           event.preventDefault();
           window.open(newTabHref, '_blank', 'noopener');
         }}
         onClick={(event) => {
+          if (hidden) {
+            onRestore();
+            return;
+          }
           if (event.ctrlKey || event.metaKey) {
             event.preventDefault();
             window.open(newTabHref, '_blank', 'noopener');
@@ -605,7 +733,11 @@ function TerminalSessionLauncher({
         ref={setNodeRef}
         style={{ transform: CSS.Translate.toString(transform) }}
         title={
-          openPaneId
+          hidden
+            ? 'Restore this session to the session bar'
+            : sessionClosePending
+            ? `Closing ${labels.session}…`
+            : openPaneId
             ? 'Show this open tab'
             : 'Click to add tab · Ctrl/Cmd-click for new browser tab · drag to split'
         }
@@ -622,7 +754,11 @@ function TerminalSessionLauncher({
           <strong>{target.session.name}</strong>
           <small>{sessionDetail(target.session)}</small>
         </span>
-        {openPaneId ? <span className="terminal-session-open-mark">Open</span> : null}
+        {hidden ? (
+          <span className="terminal-session-open-mark">Hidden</span>
+        ) : openPaneId ? (
+          <span className="terminal-session-open-mark">Open</span>
+        ) : null}
       </button>
       <button
         aria-label={`Rename ${labels.session} ${target.session.name}`}
@@ -638,12 +774,27 @@ function TerminalSessionLauncher({
       >
         <Pencil aria-hidden="true" size={13} />
       </button>
-      <PlacementMenu
-        canPlace={openPaneId === null}
-        newTabHref={newTabHref}
-        onPlace={onOpen}
-        sessionName={target.session.name}
-      />
+      {hidden ? (
+        <button
+          aria-label={`Restore ${labels.session} ${target.session.name}`}
+          className="terminal-session-restore-trigger"
+          disabled={sessionClosePending}
+          onClick={onRestore}
+          title={`Restore ${labels.session}`}
+          type="button"
+        >
+          <Eye aria-hidden="true" size={13} />
+        </button>
+      ) : (
+        <PlacementMenu
+          canPlace={openPaneId === null}
+          disabled={sessionClosePending}
+          newTabHref={newTabHref}
+          onHide={onHide}
+          onPlace={onOpen}
+          sessionName={target.session.name}
+        />
+      )}
     </div>
   );
 }
@@ -774,9 +925,15 @@ function TerminalSessionDock({
   onProjectChange,
   onRefresh,
   findOpenPane,
+  hiddenSessionNames,
+  pendingSessionCloses,
+  showHiddenSessions,
+  onHide,
   onOpen,
   onCreate,
   onRename,
+  onRestore,
+  onToggleHidden,
 }: {
   fullscreenHidden: boolean;
   projects: Project[];
@@ -788,17 +945,45 @@ function TerminalSessionDock({
   onProjectChange: (projectId: string) => void;
   onRefresh: () => void;
   findOpenPane: (projectId: string, sessionName: string) => string | null;
+  hiddenSessionNames: string[];
+  pendingSessionCloses: ReadonlySet<string>;
+  showHiddenSessions: boolean;
+  onHide: (target: TerminalTarget) => void;
   onOpen: (target: TerminalTarget, placement: TerminalPlacement) => void;
   onCreate: (project: Project, name?: string) => Promise<void>;
   onRename: (target: TerminalTarget, name: string) => Promise<void>;
+  onRestore: (target: TerminalTarget) => void;
+  onToggleHidden: () => void;
 }) {
   const {
-    icons: { ChevronsUpDown, FolderGit2, MousePointer2, RefreshCw },
+    icons: {
+      ChevronDown,
+      ChevronRight,
+      ChevronsUpDown,
+      FolderGit2,
+      MousePointer2,
+      RefreshCw,
+    },
     labels,
     slots,
   } = useTerminalRuntime();
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? projects[0];
+  const hiddenNameSet = new Set(hiddenSessionNames);
+  const visibleSessions =
+    workspace?.sessions.filter((session) => !hiddenNameSet.has(session.name)) ?? [];
+  const hiddenSessions =
+    workspace?.sessions.filter((session) => hiddenNameSet.has(session.name)) ?? [];
+
+  function targetFor(session: TerminalSession): TerminalTarget | null {
+    if (!selectedProject) return null;
+    return {
+      projectId: selectedProject.id,
+      projectName: selectedProject.name,
+      projectEmoji: selectedProject.emoji,
+      session,
+    };
+  }
 
   return (
     <section
@@ -851,23 +1036,69 @@ function TerminalSessionDock({
             {error}
           </span>
         ) : workspace?.sessions.length && selectedProject ? (
-          workspace.sessions.map((session) => {
-            const target: TerminalTarget = {
-              projectId: selectedProject.id,
-              projectName: selectedProject.name,
-              projectEmoji: selectedProject.emoji,
-              session,
-            };
+          <>
+          {visibleSessions.map((session) => {
+            const target = targetFor(session)!;
             return (
               <TerminalSessionLauncher
+                hidden={false}
                 key={`${selectedProject.id}:${session.name}`}
+                onHide={() => onHide(target)}
                 onOpen={(placement) => onOpen(target, placement)}
                 onRename={(name) => onRename(target, name)}
+                onRestore={() => onRestore(target)}
                 openPaneId={findOpenPane(selectedProject.id, session.name)}
+                sessionClosePending={pendingSessionCloses.has(
+                  `${selectedProject.id}:${session.name}`,
+                )}
                 target={target}
               />
             );
-          })
+          })}
+          {visibleSessions.length === 0 ? (
+            <span className="terminal-session-dock-status">
+              All {labels.sessions} are hidden
+            </span>
+          ) : null}
+          {hiddenSessions.length > 0 ? (
+            <div className="terminal-hidden-session-group">
+              <button
+                aria-expanded={showHiddenSessions}
+                className="terminal-hidden-session-toggle"
+                onClick={onToggleHidden}
+                type="button"
+              >
+                <span>Hidden</span>
+                <small>{hiddenSessions.length}</small>
+                {showHiddenSessions ? (
+                  <ChevronDown aria-hidden="true" size={14} />
+                ) : (
+                  <ChevronRight aria-hidden="true" size={14} />
+                )}
+              </button>
+              {showHiddenSessions
+                ? hiddenSessions.map((session) => {
+                    const target = targetFor(session)!;
+                    return (
+                      <TerminalSessionLauncher
+                        hidden
+                        key={`${selectedProject.id}:${session.name}:hidden`}
+                        onHide={() => onHide(target)}
+                        onOpen={(placement) => onOpen(target, placement)}
+                        onRename={(name) => onRename(target, name)}
+                        onRestore={() => onRestore(target)}
+                        openPaneId={null}
+                        sessionClosePending={pendingSessionCloses.has(
+                          `${selectedProject.id}:${session.name}`,
+                        )}
+                        target={target}
+                      />
+                    );
+                  })
+                : null}
+            </div>
+          ) : null}
+          </>
         ) : (
           <span className="terminal-session-dock-status">
             {selectedProject ? `No ${labels.sessions} in this project` : 'No project selected'}
@@ -998,10 +1229,13 @@ export default function TerminalWorkspace({
   primaryWorkspace,
   selectedSession,
   selectedTargetRevision,
+  hiddenSessionsStorageKey = 'dolphin.terminal.hiddenSessions.v1',
   isNarrowLayout,
   onActiveTargetChange,
+  onActiveTargetCleared,
   onCreateSession,
   onPaneCountChange,
+  onPersistentSessionClosed,
   onRefreshPrimaryProject,
   onRenameSession,
 }: TerminalWorkspaceProps) {
@@ -1039,6 +1273,11 @@ export default function TerminalWorkspace({
   const [dockProjectId, setDockProjectId] = useState(primaryProject.id);
   const [dockLoading, setDockLoading] = useState(false);
   const [dockError, setDockError] = useState<string | null>(null);
+  const [sessionCloseError, setSessionCloseError] = useState<string | null>(null);
+  const [hiddenSessionsByProject, setHiddenSessionsByProject] = useState<
+    Record<string, string[]>
+  >(() => loadHiddenSessions(hiddenSessionsStorageKey));
+  const [showHiddenSessions, setShowHiddenSessions] = useState(true);
   const [activeDragItem, setActiveDragItem] = useState<ActiveTerminalDrag | null>(
     null,
   );
@@ -1048,8 +1287,17 @@ export default function TerminalWorkspace({
   const dockProjectIdRef = useRef(dockProjectId);
   const mountedRef = useRef(true);
   const activeTargetChangeRef = useRef(onActiveTargetChange);
+  const activeTargetClearRef = useRef(onActiveTargetCleared);
+  const activeTargetEffectInitializedRef = useRef(false);
   const notifiedActiveTargetRef = useRef('');
   const pendingLoadsRef = useRef(new Map<string, Promise<WorkspaceStatus>>());
+  const closeRegistry = useMemo(
+    () => pendingSessionCloseRegistry(client),
+    [client],
+  );
+  const [pendingSessionCloses, setPendingSessionCloses] = useState<Set<string>>(
+    () => new Set(closeRegistry.keys),
+  );
   // A persisted split tree may have a different active tab from the host's
   // route. Start unacknowledged so the controlled target wins on mount while
   // the rest of the restored layout remains intact.
@@ -1074,6 +1322,7 @@ export default function TerminalWorkspace({
   workspaceCacheRef.current = workspaceCache;
   dockProjectIdRef.current = dockProjectId;
   activeTargetChangeRef.current = onActiveTargetChange;
+  activeTargetClearRef.current = onActiveTargetCleared;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1083,11 +1332,89 @@ export default function TerminalWorkspace({
   }, []);
 
   useEffect(() => {
+    const update = (
+      keys: Set<string>,
+      closedTargets: Array<{ projectId: string; sessionName: string }>,
+      failedTargets: Array<{
+        projectId: string;
+        sessionName: string;
+        message: string;
+      }>,
+    ) => {
+      setPendingSessionCloses(keys);
+      if (failedTargets.length > 0) {
+        setSessionCloseError(failedTargets[failedTargets.length - 1].message);
+        for (const target of failedTargets) {
+          closeRegistry.failedTargets.delete(
+            `${target.projectId}:${target.sessionName}`,
+          );
+        }
+      }
+      if (closedTargets.length === 0) return;
+      setWorkspaceCache((current) => {
+        let next = current;
+        for (const target of closedTargets) {
+          const projectWorkspace = next[target.projectId];
+          if (!projectWorkspace) continue;
+          const sessions = projectWorkspace.sessions.filter(
+            (session) => session.name !== target.sessionName,
+          );
+          if (sessions.length === projectWorkspace.sessions.length) continue;
+          next = {
+            ...next,
+            [target.projectId]: {
+              ...projectWorkspace,
+              session_count: sessions.length,
+              sessions,
+            },
+          };
+        }
+        return next;
+      });
+      setWorkspaceState((current) => {
+        let next = current;
+        for (const target of closedTargets) {
+          const open = findTerminalTabByTarget(
+            next.root,
+            target.projectId,
+            target.sessionName,
+          );
+          if (open) {
+            next = closeTerminalTab(
+              next,
+              open.paneId,
+              target.projectId,
+              target.sessionName,
+            );
+          }
+        }
+        return next;
+      });
+    };
+    closeRegistry.listeners.add(update);
+    update(
+      new Set(closeRegistry.keys),
+      Array.from(closeRegistry.closedTargets.values()),
+      Array.from(closeRegistry.failedTargets.values()),
+    );
+    return () => {
+      closeRegistry.listeners.delete(update);
+    };
+  }, [closeRegistry]);
+
+  useEffect(() => {
+    let restoredTarget = false;
+    for (const session of primaryWorkspace.sessions) {
+      const key = `${primaryProject.id}:${session.name}`;
+      if (closeRegistry.keys.has(key)) continue;
+      restoredTarget = closeRegistry.closedTargets.delete(key) || restoredTarget;
+    }
+    if (restoredTarget) publishPendingSessionCloses(closeRegistry);
     setWorkspaceCache((current) => ({
       ...current,
       [primaryProject.id]: primaryWorkspace,
     }));
-  }, [primaryProject.id, primaryWorkspace]);
+  }, [closeRegistry, primaryProject.id, primaryWorkspace]);
 
   useEffect(() => {
     if (!projects.some((project) => project.id === dockProjectId)) {
@@ -1099,6 +1426,10 @@ export default function TerminalWorkspace({
     persistWorkspace(workspaceState, storage, storageKey);
   }, [storage, storageKey, workspaceState]);
 
+  useEffect(() => {
+    saveHiddenSessions(hiddenSessionsStorageKey, hiddenSessionsByProject);
+  }, [hiddenSessionsByProject, hiddenSessionsStorageKey]);
+
   const loadWorkspace = useCallback(
     (projectId: string, force = false): Promise<WorkspaceStatus> => {
       const cached = workspaceCacheRef.current[projectId];
@@ -1108,6 +1439,14 @@ export default function TerminalWorkspace({
 
       const request = fetchWorkspace(projectId)
         .then((workspace) => {
+          let restoredTarget = false;
+          for (const session of workspace.sessions) {
+            const key = `${projectId}:${session.name}`;
+            if (closeRegistry.keys.has(key)) continue;
+            restoredTarget =
+              closeRegistry.closedTargets.delete(key) || restoredTarget;
+          }
+          if (restoredTarget) publishPendingSessionCloses(closeRegistry);
           setWorkspaceCache((current) => ({ ...current, [projectId]: workspace }));
           return workspace;
         })
@@ -1119,7 +1458,7 @@ export default function TerminalWorkspace({
       pendingLoadsRef.current.set(projectId, request);
       return request;
     },
-    [],
+    [closeRegistry],
   );
 
   useEffect(() => {
@@ -1161,17 +1500,28 @@ export default function TerminalWorkspace({
   activeTabRef.current = activeTab;
 
   useEffect(() => {
-    if (!activeTab) return;
-    // A persisted tree may disagree with the embedder's first controlled
-    // target. Let the reconciliation effect below acknowledge that target
-    // before emitting any restored active tab back to the host, otherwise the
-    // two effects can continuously overwrite one another.
-    if (requestedTargetRef.current === '') return;
+    if (!activeTargetEffectInitializedRef.current) {
+      activeTargetEffectInitializedRef.current = true;
+      if (!activeTab) return;
+      const expected = `${initialTargetRef.current.projectId}:${
+        initialTargetRef.current.sessionName ?? ''
+      }`;
+      const actual = `${activeTab.projectId}:${activeTab.sessionName}`;
+      if (actual !== expected) return;
+    }
+    if (!activeTab) {
+      const projectId = activePane?.preferredProjectId ?? primaryProject.id;
+      const key = `${projectId}:`;
+      if (notifiedActiveTargetRef.current === key) return;
+      notifiedActiveTargetRef.current = key;
+      activeTargetClearRef.current?.(projectId);
+      return;
+    }
     const key = `${activeTab.projectId}:${activeTab.sessionName}`;
     if (notifiedActiveTargetRef.current === key) return;
     notifiedActiveTargetRef.current = key;
     activeTargetChangeRef.current(activeTab.projectId, activeTab.sessionName);
-  }, [activeTab]);
+  }, [activePane?.preferredProjectId, activeTab, primaryProject.id]);
 
   useEffect(() => {
     onPaneCountChange?.(panes.length);
@@ -1202,14 +1552,24 @@ export default function TerminalWorkspace({
     const revisionChanged =
       requestedTargetRevisionRef.current !== selectedTargetRevision;
     requestedTargetRevisionRef.current = selectedTargetRevision;
+    // A host mutation can briefly know a canonical created session before its
+    // own workspace cache contains it. Treat null as a clear command only
+    // when the host explicitly advances the controlled-target revision.
     if (
-      !selectedSession ||
-      (!revisionChanged && requestedTargetRef.current === key)
+      !selectedSession &&
+      !revisionChanged &&
+      requestedTargetRef.current !== ''
     ) {
+      return;
+    }
+    if (!revisionChanged && requestedTargetRef.current === key) {
       return;
     }
     requestedTargetRef.current = key;
     setWorkspaceState((current) => {
+      if (!selectedSession) {
+        return clearActiveTerminalTarget(current, primaryProject.id);
+      }
       const existing = findTerminalTabByTarget(
         current.root,
         primaryProject.id,
@@ -1234,12 +1594,8 @@ export default function TerminalWorkspace({
   const activatePane = useCallback(
     (pane: TerminalWorkspacePane) => {
       setWorkspaceState((current) => activateTerminalPane(current, pane.id));
-      const tab = activeTerminalTab(pane);
-      if (tab) {
-        onActiveTargetChange(tab.projectId, tab.sessionName);
-      }
     },
-    [onActiveTargetChange],
+    [],
   );
 
   const placeTarget = useCallback(
@@ -1311,9 +1667,11 @@ export default function TerminalWorkspace({
           target.session.name,
         );
       });
-      onActiveTargetChange(target.projectId, target.session.name);
+      // The committed-active-tab effect is the sole host notifier. A queued
+      // update can remove the requested pane before this updater runs; in that
+      // case placement is a no-op and no route change may escape.
     },
-    [onActiveTargetChange, workspaceState.activePaneId],
+    [workspaceState.activePaneId],
   );
 
   async function refreshPaneProject(projectId: string) {
@@ -1345,6 +1703,111 @@ export default function TerminalWorkspace({
         },
       };
     });
+  }
+
+  function beginSessionClose(projectId: string, sessionName: string) {
+    const key = `${projectId}:${sessionName}`;
+    if (closeRegistry.keys.has(key)) return false;
+    closeRegistry.failedTargets.delete(key);
+    setSessionCloseError(null);
+    closeRegistry.keys.add(key);
+    publishPendingSessionCloses(closeRegistry);
+    return true;
+  }
+
+  function recordSessionCloseFailure(
+    projectId: string,
+    sessionName: string,
+    reason: unknown,
+  ) {
+    const message =
+      reason instanceof Error
+        ? reason.message
+        : `Could not close ${labels.session} "${sessionName}".`;
+    closeRegistry.failedTargets.set(`${projectId}:${sessionName}`, {
+      projectId,
+      sessionName,
+      message,
+    });
+    publishPendingSessionCloses(closeRegistry);
+  }
+
+  function endSessionClose(
+    projectId: string,
+    sessionName: string,
+    succeeded: boolean,
+  ) {
+    const key = `${projectId}:${sessionName}`;
+    const wasPending = closeRegistry.keys.delete(key);
+    if (succeeded) {
+      closeRegistry.closedTargets.set(key, { projectId, sessionName });
+    }
+    if (!wasPending && !succeeded) return;
+    publishPendingSessionCloses(closeRegistry);
+  }
+
+  function hideDockSession(target: TerminalTarget) {
+    if (closeRegistry.keys.has(`${target.projectId}:${target.session.name}`)) return;
+    const hiddenNames = new Set([
+      ...(hiddenSessionsByProject[target.projectId] ?? []),
+      target.session.name,
+    ]);
+    const replacement = workspaceCacheRef.current[target.projectId]?.sessions.find(
+      (session) => !hiddenNames.has(session.name),
+    );
+    setHiddenSessionsByProject((current) => {
+      const names = current[target.projectId] ?? [];
+      if (names.includes(target.session.name)) return current;
+      return { ...current, [target.projectId]: [...names, target.session.name] };
+    });
+    setShowHiddenSessions(true);
+    setWorkspaceState((current) => {
+      const open = findTerminalTabByTarget(
+        current.root,
+        target.projectId,
+        target.session.name,
+      );
+      if (!open) return current;
+      // "Hide" is an inventory preference. When no visible replacement
+      // exists, preserve the already-open terminal so the embedder never has
+      // an empty active target or a stale route.
+      if (!replacement) return current;
+      const activeBefore = activeTerminalTab(
+        findTerminalPane(current.root, current.activePaneId) ??
+          collectTerminalPanes(current.root)[0],
+      );
+      const targetWasActive =
+        activeBefore?.projectId === target.projectId &&
+        activeBefore.sessionName === target.session.name;
+      const closed = closeTerminalTab(
+            current,
+            open.paneId,
+            target.projectId,
+            target.session.name,
+          );
+      if (!targetWasActive) {
+        return { ...closed, activePaneId: current.activePaneId };
+      }
+      const activePane = findTerminalPane(closed.root, closed.activePaneId);
+      if ((activePane && activeTerminalTab(activePane)) || !replacement) return closed;
+      const replacementPane = findTerminalPane(closed.root, open.paneId);
+      return openTerminalTab(
+        closed,
+        replacementPane?.id ?? closed.activePaneId,
+        target.projectId,
+        replacement.name,
+      );
+    });
+  }
+
+  function restoreDockSession(target: TerminalTarget) {
+    if (closeRegistry.keys.has(`${target.projectId}:${target.session.name}`)) return;
+    setHiddenSessionsByProject((current) => ({
+      ...current,
+      [target.projectId]: (current[target.projectId] ?? []).filter(
+        (name) => name !== target.session.name,
+      ),
+    }));
   }
 
   function sessionForPane(pane: TerminalWorkspacePane): TerminalSession | null {
@@ -1429,6 +1892,9 @@ export default function TerminalWorkspace({
                     projectName: tabProject?.name ?? 'Unknown project',
                     projectEmoji: tabProject?.emoji ?? '◫',
                     isActive: tabIndex === pane.activeTabIndex,
+                    isSessionClosePending: pendingSessionCloses.has(
+                      `${paneTab.projectId}:${paneTab.sessionName}`,
+                    ),
                   };
                 }),
                 isActive,
@@ -1443,7 +1909,6 @@ export default function TerminalWorkspace({
                       sessionName,
                     ),
                   );
-                  onActiveTargetChange(projectId, sessionName);
                 },
                 onCloseTab: (projectId, sessionName) => {
                   setWorkspaceState((current) =>
@@ -1465,20 +1930,34 @@ export default function TerminalWorkspace({
               }}
               onSessionClosed={() => {
                 removeCachedSession(tab.projectId, tab.sessionName);
-                setWorkspaceState((current) =>
-                  closeTerminalTab(
-                    current,
-                    pane.id,
+                onPersistentSessionClosed?.(tab.projectId, tab.sessionName);
+                setWorkspaceState((current) => {
+                  const open = findTerminalTabByTarget(
+                    current.root,
                     tab.projectId,
                     tab.sessionName,
-                  ),
-                );
+                  );
+                  return open
+                    ? closeTerminalTab(
+                        current,
+                        open.paneId,
+                        tab.projectId,
+                        tab.sessionName,
+                      )
+                    : current;
+                });
                 void refreshPaneProject(tab.projectId).catch(reportWorkspaceError);
               }}
+              onSessionCloseError={recordSessionCloseFailure}
+              onSessionCloseRequestEnd={endSessionClose}
+              onSessionCloseRequestStart={beginSessionClose}
               onSessionChanged={() => {
                 setDockError(null);
                 void refreshPaneProject(tab.projectId).catch(reportWorkspaceError);
               }}
+              sessionClosePending={pendingSessionCloses.has(
+                `${tab.projectId}:${tab.sessionName}`,
+              )}
             />
           </Suspense>
           {activeDragItem ? <TerminalPaneDropOverlay paneId={pane.id} /> : null}
@@ -1488,7 +1967,7 @@ export default function TerminalWorkspace({
     // Stable pane ids preserve terminal connections while active borders,
     // drop zones, and project/session observations update together.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeDragItem, fullscreenPaneId, panes, primaryProject.id, projects, workspaceCache, workspaceState.activePaneId],
+    [activeDragItem, fullscreenPaneId, panes, pendingSessionCloses, primaryProject.id, projects, workspaceCache, workspaceState.activePaneId],
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -1537,6 +2016,7 @@ export default function TerminalWorkspace({
       | Partial<TabStripTargetData>
       | undefined;
     if (!item || typeof data?.paneId !== 'string') return;
+    if (closeRegistry.keys.has(`${item.projectId}:${item.sessionName}`)) return;
 
     if (item.origin === 'dock') {
       if (
@@ -1566,7 +2046,6 @@ export default function TerminalWorkspace({
           data.tabIndex,
         ),
       );
-      onActiveTargetChange(item.projectId, item.sessionName);
       return;
     }
     if (data.type !== 'terminal-drop' || !data.placement) return;
@@ -1613,10 +2092,13 @@ export default function TerminalWorkspace({
         item.sessionName,
       );
     });
-    onActiveTargetChange(item.projectId, item.sessionName);
   }
 
   function cacheSession(projectId: string, session: TerminalSession) {
+    const key = `${projectId}:${session.name}`;
+    if (closeRegistry.closedTargets.delete(key)) {
+      publishPendingSessionCloses(closeRegistry);
+    }
     setWorkspaceCache((current) => {
       const projectWorkspace = current[projectId];
       if (!projectWorkspace) return current;
@@ -1672,12 +2154,25 @@ export default function TerminalWorkspace({
   }
 
   async function renameDockSession(target: TerminalTarget, name: string) {
+    if (closeRegistry.keys.has(`${target.projectId}:${target.session.name}`)) {
+      throw new Error(`Wait for this ${labels.session} to finish closing.`);
+    }
     const renamed = await onRenameSession(
       target.projectId,
       target.session,
       name,
     );
     if (!mountedRef.current) return;
+    setHiddenSessionsByProject((current) => {
+      const names = current[target.projectId] ?? [];
+      if (!names.includes(target.session.name)) return current;
+      return {
+        ...current,
+        [target.projectId]: names.map((sessionName) =>
+          sessionName === target.session.name ? renamed.name : sessionName,
+        ),
+      };
+    });
     setWorkspaceCache((current) => {
       const projectWorkspace = current[target.projectId];
       if (!projectWorkspace) return current;
@@ -1699,13 +2194,6 @@ export default function TerminalWorkspace({
         renamed.name,
       ),
     );
-    const currentActiveTab = activeTabRef.current;
-    if (
-      currentActiveTab?.projectId === target.projectId &&
-      currentActiveTab.sessionName === target.session.name
-    ) {
-      onActiveTargetChange(target.projectId, renamed.name);
-    }
   }
 
   const dockWorkspace = workspaceCache[dockProjectId] ?? null;
@@ -1767,18 +2255,22 @@ export default function TerminalWorkspace({
         data-pane-count={panes.length}
       >
         <TerminalSessionDock
-          error={dockError}
+          error={sessionCloseError ?? dockError}
           findOpenPane={(projectId, sessionName) =>
             findTerminalPaneByTarget(workspaceState.root, projectId, sessionName)
           }
           fullscreenHidden={fullscreenPaneId !== null}
+          hiddenSessionNames={hiddenSessionsByProject[dockProjectId] ?? []}
           loading={dockLoading}
+          pendingSessionCloses={pendingSessionCloses}
           onCreate={createDockSession}
+          onHide={hideDockSession}
           onOpen={placeTarget}
           onProjectChange={setDockProjectId}
           onRefresh={() => {
             setDockLoading(true);
             setDockError(null);
+            setSessionCloseError(null);
             void loadWorkspace(dockProjectId, true)
               .catch((reason) => {
                 setDockError(
@@ -1790,9 +2282,12 @@ export default function TerminalWorkspace({
               .finally(() => setDockLoading(false));
           }}
           onRename={renameDockSession}
+          onRestore={restoreDockSession}
+          onToggleHidden={() => setShowHiddenSessions((current) => !current)}
           projectSelectRef={projectSelectRef}
           projects={projects}
           selectedProjectId={dockProjectId}
+          showHiddenSessions={showHiddenSessions}
           workspace={dockWorkspace}
         />
 

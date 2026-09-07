@@ -28,8 +28,9 @@ A public release can provide:
 - OCI image from the repository Dockerfile.
 - npm packages for protocol, pure state and React embedding.
 
-`./scripts/release-check` performs the complete local release gate and writes
+`DOLPHIN_TERMINAL_CANDIDATE_SHA=<reviewed-full-sha> ./scripts/release-check`
+performs the complete local release gate and writes
 checksummed artifacts plus dependency records under `release-dist/`. The 83
-parity entries and security/privacy review are complete for version 0.3.0.
+parity entries and security/privacy review are complete for version 0.3.3.
 Artifact signing requires the owner's established release identity.
 Publishing, pushing and remote exposure still require explicit authorization.

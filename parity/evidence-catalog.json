@@ -189,9 +189,9 @@
     },
     "DF-BOUNDARY": {
       "repository": "dolphin",
-      "files": ["dolphin-web/scripts/check-terminal-boundary.mjs", "dolphin-web/src/dolphinTerminalClient.ts"],
+      "files": ["dolphin-web/scripts/check-terminal-boundary.mjs", "dolphin-web/scripts/check-terminal-boundary.test.mjs", "dolphin-web/src/dolphinTerminalClient.ts"],
       "command": "npm run check:terminal-boundary && npm run build",
-      "scope": "Dolphin imports only the standalone package UI/core while retaining a thin product adapter; deleted duplicate implementations cannot return unnoticed."
+      "scope": "Dolphin imports only the standalone package UI/core while retaining a thin product adapter; passing and deliberately violating fixtures prove nested JS/JSX/MTS duplicates, direct xterm imports, comment-only wiring, missing CSS, and copied selectors cannot return unnoticed."
     },
     "DF-ROLLBACK": {
       "repository": "dolphin",

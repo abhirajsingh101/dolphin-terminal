@@ -25,7 +25,7 @@
     "serve": "PYTHONPATH=python python -m dolphin_terminal serve",
     "doctor": "PYTHONPATH=python python -m dolphin_terminal doctor",
     "check": "npm run typecheck && npm test && npm run build && PYTHONPATH=python python -m pytest -q python/tests",
-    "test": "npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/react",
+    "test": "node --test scripts/parityCandidateBinding.test.mjs scripts/containerTagPreflight.test.mjs && npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/react",
     "test:e2e": "npm run build && playwright test",
     "test:soak": "PYTHONPATH=python python scripts/native-soak.py",
     "check:parity": "node scripts/verify-parity.mjs",

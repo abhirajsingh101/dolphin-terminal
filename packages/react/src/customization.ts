@@ -7,10 +7,14 @@ import {
   Brain,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Copy,
   ChevronsUpDown,
   CirclePause,
   ExternalLink,
+  Eye,
+  EyeOff,
   FolderGit2,
   History,
   LoaderCircle,
@@ -47,10 +51,14 @@ export interface TerminalIconRegistry {
   Brain: LucideIcon;
   Check: LucideIcon;
   CheckCircle2: LucideIcon;
+  ChevronDown: LucideIcon;
+  ChevronRight: LucideIcon;
   Copy: LucideIcon;
   ChevronsUpDown: LucideIcon;
   CirclePause: LucideIcon;
   ExternalLink: LucideIcon;
+  Eye: LucideIcon;
+  EyeOff: LucideIcon;
   FolderGit2: LucideIcon;
   History: LucideIcon;
   LoaderCircle: LucideIcon;
@@ -90,10 +98,14 @@ export const defaultTerminalIcons: TerminalIconRegistry = {
   Brain,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Copy,
   ChevronsUpDown,
   CirclePause,
   ExternalLink,
+  Eye,
+  EyeOff,
   FolderGit2,
   History,
   LoaderCircle,

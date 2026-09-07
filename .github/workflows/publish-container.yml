@@ -7,6 +7,11 @@ on:
         description: Existing Dolphin Terminal release tag without the v prefix
         required: true
         default: 0.3.3
+      update_latest:
+        description: Also promote this immutable version image to latest
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,9 +21,23 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate release version
+        id: version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node -e '
+            const version = process.env.RELEASE_VERSION ?? "";
+            const semver = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+            if (!semver.test(version)) {
+              console.error("version must be an exact SemVer value");
+              process.exit(1);
+            }
+          '
+          printf 'value=%s\n' "$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: v${{ inputs.version }}
+          ref: v${{ steps.version.outputs.value }}
       - name: Resolve immutable release revision
         id: release
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -28,14 +47,30 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Refuse a conflicting immutable version tag
+        id: preflight
+        env:
+          RELEASE_IMAGE: ghcr.io/${{ github.repository_owner }}/dolphin-terminal:${{ steps.version.outputs.value }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          node scripts/containerTagPreflight.mjs "$RELEASE_IMAGE" "$RELEASE_SHA" \
+            >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        if: ${{ steps.preflight.outputs.publish == 'true' }}
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/dolphin-terminal:${{ inputs.version }}
-            ghcr.io/${{ github.repository_owner }}/dolphin-terminal:latest
+            ghcr.io/${{ github.repository_owner }}/dolphin-terminal:${{ steps.version.outputs.value }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
             org.opencontainers.image.revision=${{ steps.release.outputs.sha }}
+      - name: Promote the published version to latest
+        if: ${{ inputs.update_latest }}
+        env:
+          RELEASE_IMAGE: ghcr.io/${{ github.repository_owner }}/dolphin-terminal:${{ steps.version.outputs.value }}
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/${{ github.repository_owner }}/dolphin-terminal:latest \
+            "$RELEASE_IMAGE"

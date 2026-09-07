@@ -50,6 +50,7 @@
   "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc -p tsconfig.json && cp src/styles.css dist/styles.css && cp src/theme.css dist/theme.css",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run src"
   },

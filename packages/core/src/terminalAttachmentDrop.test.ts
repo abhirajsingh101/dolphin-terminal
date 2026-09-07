@@ -9,6 +9,7 @@ import {
   selectTerminalAttachments,
   terminalAttachmentAgent,
   terminalAttachmentLimitLabel,
+  terminalAttachmentUploadTimeoutMs,
 } from './terminalAttachmentDrop';
 
 function file(name: string, type: string, size: number): File {
@@ -16,6 +17,14 @@ function file(name: string, type: string, size: number): File {
 }
 
 describe('selectTerminalAttachments', () => {
+  it('scales upload recovery deadlines with file size', () => {
+    expect(terminalAttachmentUploadTimeoutMs(0)).toBe(30_000);
+    expect(terminalAttachmentUploadTimeoutMs(64 * 1024)).toBe(31_000);
+    expect(terminalAttachmentUploadTimeoutMs(300 * 1024 * 1024)).toBe(
+      4_830_000,
+    );
+  });
+
   it('uses a 600 MiB inclusive per-file boundary', () => {
     expect(MAX_TERMINAL_ATTACHMENT_BYTES).toBe(600 * 1024 * 1024);
 

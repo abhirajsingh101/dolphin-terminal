@@ -95,7 +95,8 @@ only `8733`.
 
 ## Current capabilities
 
-- Exact project/session dock with create, rename and confirmed termination.
+- Exact project/session dock with create, rename, persistent hide/restore, and
+  confirmed termination.
 - Multiple terminal tabs, recursive splits, drag/keyboard placement and
   per-browser-tab persistence.
 - Fullscreen with exclusive focus, accessible controls and mobile switching.
