@@ -19,7 +19,7 @@ from .config import ConfigurationError, Settings, parse_workspaces
 from .session_backend import create_session_backend
 
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 
 def _is_loopback(host: str) -> bool:
