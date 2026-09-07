@@ -43,8 +43,14 @@ test.describe.serial('standalone native terminal', () => {
     );
     expect(created.status()).toBe(201);
     const routeSession = ((await created.json()) as { name: string }).name;
+    const alternateCreated = await request.post(
+      `/terminal/v1/workspaces/${workspaceId}/sessions`,
+      { data: { name: `${requestedRouteTarget}-alternate`, mode: 'shell' } },
+    );
+    expect(alternateCreated.status()).toBe(201);
+    const alternateSession = ((await alternateCreated.json()) as { name: string }).name;
 
-    await page.addInitScript(() => {
+    await page.addInitScript(({ projectId, routeSession, alternateSession }) => {
       window.sessionStorage.setItem(
         'dolphin.terminal.workspace.tab.v2',
         JSON.stringify({
@@ -59,12 +65,40 @@ test.describe.serial('standalone native terminal', () => {
           activePaneId: 'stale-pane',
         }),
       );
-    });
+      window.sessionStorage.setItem(
+        [
+          'dolphin.terminal.workspace.tab.v2',
+          encodeURIComponent(projectId),
+          encodeURIComponent(routeSession),
+        ].join(':'),
+        JSON.stringify({
+          version: 2,
+          root: {
+            type: 'terminal',
+            id: 'scoped-pane',
+            preferredProjectId: projectId,
+            tabs: [
+              { projectId, sessionName: routeSession },
+              { projectId, sessionName: alternateSession },
+            ],
+            activeTabIndex: 1,
+          },
+          activePaneId: 'scoped-pane',
+        }),
+      );
+    }, { projectId: workspaceId, routeSession, alternateSession });
 
     await page.goto(
       `/?workspace=${encodeURIComponent(workspaceId)}&session=${encodeURIComponent(routeSession)}`,
     );
     await expect(page.locator('.terminal-pane').filter({ hasText: routeSession })).toBeVisible();
+    await expect(page.getByRole('tab', { name: new RegExp(routeSession) })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(
+      page.getByRole('tab', { name: new RegExp(alternateSession) }),
+    ).toBeVisible();
     await expect(page.getByLabel('Terminal connection: live')).toBeVisible();
     await expect(page.getByText(/Workspace not found/)).toHaveCount(0);
     const scopedState = await page.evaluate(
@@ -93,6 +127,7 @@ test.describe.serial('standalone native terminal', () => {
     const capabilities = await request.get('/terminal/v1/capabilities');
     expect(await capabilities.json()).toMatchObject({
       session_backend: { id: 'native', available: true },
+      attachments: { max_bytes: 600 * 1024 * 1024 },
       dictation: { enabled: false },
       automation: { enabled: false },
     });
@@ -121,12 +156,25 @@ test.describe.serial('standalone native terminal', () => {
       })
       .toContain(`NATIVE_BROWSER_${run}`);
 
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const liveScreen = page.locator('.xterm-screen:visible');
+    const liveBounds = await liveScreen.boundingBox();
+    expect(liveBounds).not.toBeNull();
+    await page.mouse.move(liveBounds!.x + 1, liveBounds!.y + 34);
+    await page.mouse.down();
+    await page.mouse.move(liveBounds!.x + 310, liveBounds!.y + 34, { steps: 12 });
+    await page.mouse.up();
+    await expect(page.getByTitle('Copy selection')).toBeEnabled();
+    await page.getByTitle('Copy selection').click();
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toContain(`NATIVE_BROWSER_${run}`);
+
     await page.getByTitle(/Select terminal text/).click();
     const copyLayer = page.getByLabel('Selectable terminal text');
     await expect(copyLayer).toContainText(
       `NATIVE_BROWSER_${run}`,
     );
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await copyLayer.evaluate((element, marker) => {
       const text = element.textContent ?? '';
       const start = text.indexOf(marker);

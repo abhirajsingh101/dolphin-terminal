@@ -55,6 +55,16 @@ describe('selectTerminalAttachments', () => {
     expect(terminalAttachmentLimitLabel(1536)).toBe('1536 bytes');
   });
 
+  it('falls back to the safe default for invalid public size limits', () => {
+    const ordinary = file('safe.txt', 'text/plain', 4);
+
+    expect(selectTerminalAttachments([ordinary], Number.NaN).accepted).toHaveLength(1);
+    expect(
+      selectTerminalAttachments([ordinary], Number.POSITIVE_INFINITY).accepted,
+    ).toHaveLength(1);
+    expect(selectTerminalAttachments([ordinary], 0.5).accepted).toHaveLength(1);
+  });
+
   it('accepts ordinary files and classifies supported images', () => {
     const selection = selectTerminalAttachments([
       file('notes.txt', 'text/plain', 100),

@@ -46,4 +46,14 @@ describe('TerminalRuntimeProvider customization', () => {
     expect(markup).toContain('data-overridden-terminal="true"');
     expect(markup).toContain('data-slot="Host slot"');
   });
+
+  it('never normalizes a fractional positive ceiling to zero bytes', () => {
+    const markup = renderToStaticMarkup(
+      <TerminalRuntimeProvider client={client} maxAttachmentBytes={0.5}>
+        <RuntimeProbe />
+      </TerminalRuntimeProvider>,
+    );
+
+    expect(markup).toContain('data-max-attachment-bytes="629145600"');
+  });
 });

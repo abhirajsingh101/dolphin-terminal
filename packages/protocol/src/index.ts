@@ -247,6 +247,7 @@ export interface TerminalCapabilities {
     available: boolean;
     detail: string;
   };
+  attachments: { max_bytes: number };
   dictation: { enabled: boolean };
   automation: { enabled: boolean };
 }

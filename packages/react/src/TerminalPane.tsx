@@ -219,6 +219,10 @@ type AttachmentTransferState = {
 };
 type CopyState = 'idle' | 'copied' | 'failed';
 const ATTACHMENT_SUCCESS_NOTICE_MS = 3_000;
+const CLOSED_CONNECTION_NOTICE =
+  'The terminal connection closed. Refresh sessions or reconnect.';
+const ERROR_CONNECTION_NOTICE =
+  'The terminal connection failed. Check the session, then reconnect.';
 type CopyLayerScrollAnchor = {
   rowsFromBottom: number;
 };
@@ -242,7 +246,9 @@ async function copyTextToClipboard(text: string): Promise<void> {
   document.body.appendChild(textarea);
   textarea.select();
   try {
-    document.execCommand('copy');
+    if (!document.execCommand('copy')) {
+      throw new Error('The browser refused the clipboard operation.');
+    }
   } finally {
     document.body.removeChild(textarea);
   }
@@ -869,8 +875,15 @@ export default function TerminalPane({
 
   useEffect(() => {
     if (!isSelectMode) {
-      setHasSelection(terminalRef.current?.hasSelection() ?? false);
-      return undefined;
+      const terminal = terminalRef.current;
+      const updateTerminalSelection = () => {
+        setHasSelection(terminal?.hasSelection() ?? false);
+      };
+      const selectionDisposable = terminal?.onSelectionChange(
+        updateTerminalSelection,
+      );
+      updateTerminalSelection();
+      return () => selectionDisposable?.dispose();
     }
 
     function updateNativeSelection() {
@@ -1066,6 +1079,7 @@ export default function TerminalPane({
           terminal.writeln('');
           terminal.writeln(`\x1b[31m${payload.message ?? 'Terminal error'}\x1b[0m`);
           setConnection('error');
+          setConnectionNotice(payload.message ?? ERROR_CONNECTION_NOTICE);
         }
       };
 
@@ -1073,7 +1087,10 @@ export default function TerminalPane({
         if (!isCurrentSocket()) return;
         // A failed connection fires onerror and then onclose; the close is
         // where the retry decision is made, so that it is made exactly once.
-        if (reachedOpen) setConnection('error');
+        if (reachedOpen) {
+          setConnection('error');
+          setConnectionNotice(ERROR_CONNECTION_NOTICE);
+        }
       };
 
       socket.onclose = () => {
@@ -1081,6 +1098,7 @@ export default function TerminalPane({
         clearConnectTimer();
         if (!shouldRetryConnection(reachedOpen)) {
           setConnection((current) => (current === 'error' ? 'error' : 'closed'));
+          setConnectionNotice((notice) => notice || CLOSED_CONNECTION_NOTICE);
           return;
         }
         giveUpOrScheduleRetry();
@@ -1357,13 +1375,21 @@ export default function TerminalPane({
 
   async function handleClose() {
     if (!session) return;
-    const ok = window.confirm(`Close ${labels.session} "${session.name}"?`);
+    const closingProjectId = projectId;
+    const closingSessionName = session.name;
+    const ok = window.confirm(`Close ${labels.session} "${closingSessionName}"?`);
     if (!ok) return;
     setOperationNotice('');
     try {
-      await closeSession(projectId, session.name);
+      await closeSession(closingProjectId, closingSessionName);
       onSessionClosed();
     } catch (reason) {
+      if (
+        projectIdRef.current !== closingProjectId ||
+        sessionRef.current?.name !== closingSessionName
+      ) {
+        return;
+      }
       setOperationNotice(
         reason instanceof Error
           ? reason.message
@@ -1490,7 +1516,9 @@ export default function TerminalPane({
           {connectionNotice ? (
             <span className="terminal-connection-notice" role="status">
               {connectionNotice}
-              {connection === 'offline' ? (
+              {connection === 'offline' ||
+              connection === 'closed' ||
+              connection === 'error' ? (
                 <button
                   className="terminal-retry-button"
                   onClick={handleRetryConnection}

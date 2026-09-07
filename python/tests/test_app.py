@@ -274,8 +274,18 @@ def test_optional_capabilities_are_disabled_by_default(tmp_path):
             "available": True,
             "detail": "Fake backend is ready.",
         },
+        "attachments": {"max_bytes": 600 * 1024 * 1024},
         "dictation": {"enabled": False},
         "automation": {"enabled": False},
     }
     assert status["status"] == "disabled"
     assert transcribe.status_code == 404
+
+
+def test_capabilities_report_the_effective_attachment_limit(tmp_path, monkeypatch):
+    monkeypatch.setenv("DOLPHIN_TERMINAL_ATTACHMENT_MAX_BYTES", "1234")
+    client, _, _ = _client(tmp_path)
+
+    capabilities = client.get("/terminal/v1/capabilities").json()
+
+    assert capabilities["attachments"] == {"max_bytes": 1234}

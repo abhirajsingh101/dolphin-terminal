@@ -63,6 +63,10 @@ export function selectTerminalAttachments(
   files: ArrayLike<File> | Iterable<File>,
   maxBytes = MAX_TERMINAL_ATTACHMENT_BYTES,
 ): TerminalAttachmentSelection {
+  const resolvedMaxBytes =
+    Number.isFinite(maxBytes) && Math.floor(maxBytes) > 0
+      ? Math.floor(maxBytes)
+      : MAX_TERMINAL_ATTACHMENT_BYTES;
   const accepted: SelectedTerminalAttachment[] = [];
   const errors: string[] = [];
 
@@ -81,9 +85,9 @@ export function selectTerminalAttachments(
       errors.push(`${file.name}: the file is empty.`);
       continue;
     }
-    if (file.size > maxBytes) {
+    if (file.size > resolvedMaxBytes) {
       errors.push(
-        `${file.name}: files must be ${terminalAttachmentLimitLabel(maxBytes)} or smaller.`,
+        `${file.name}: files must be ${terminalAttachmentLimitLabel(resolvedMaxBytes)} or smaller.`,
       );
       continue;
     }

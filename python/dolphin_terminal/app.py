@@ -375,12 +375,14 @@ def create_app(
     @application.get("/terminal/v1/capabilities")
     async def capabilities() -> dict[str, Any]:
         backend_health = resolved_backend.health()
+        attachment_settings = terminal_attachment_settings()
         return {
             "session_backend": {
                 "id": backend_health.id,
                 "available": backend_health.available,
                 "detail": backend_health.detail,
             },
+            "attachments": {"max_bytes": attachment_settings.max_attachment_bytes},
             "dictation": {"enabled": resolved_settings.dictation_enabled},
             # The reference distribution deliberately ships without an agent
             # runner. Embedders can provide one through the React runtime.

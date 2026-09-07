@@ -29,6 +29,7 @@ const disabledCapabilities: TerminalCapabilities = {
     available: false,
     detail: 'Connecting to the persistent session backend.',
   },
+  attachments: { max_bytes: 600 * 1024 * 1024 },
   dictation: { enabled: false },
   automation: { enabled: false },
 };
@@ -148,6 +149,7 @@ function StandaloneTerminal({
         newSession: 'New session',
         persistentEngine: 'session backend',
       }}
+      maxAttachmentBytes={capabilities.attachments.max_bytes}
       storageKey={storageKey}
       targetHref={targetHref}
     >

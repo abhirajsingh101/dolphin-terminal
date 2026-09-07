@@ -1,6 +1,6 @@
 {
   "schema_version": "dolphin-terminal-evidence-v1",
-  "generated_at": "2026-09-04",
+  "generated_at": "2026-09-07",
   "repositories": {
     "standalone": ".",
     "dolphin": "../dolphin-tasks"
@@ -116,8 +116,8 @@
     },
     "DF-SPLIT": {
       "repository": "dolphin",
-      "files": ["dolphin-web/e2e/terminal-split-workspace.spec.ts"],
-      "command": "npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "files": ["dolphin-web/e2e/dolphin-terminal-adoption.spec.ts"],
+      "command": "npm run test:e2e -- dolphin-terminal-adoption.spec.ts",
       "scope": "Packaged component dock, tabs, drag/keyboard placement, recursive splits, persistence/migration, exact links, fullscreen exclusivity, mobile, and automation behavior in Dolphin."
     },
     "DF-RECONNECT": {
@@ -164,13 +164,13 @@
     },
     "DF-ROUTING": {
       "repository": "dolphin",
-      "files": ["dolphin-web/src/appRoute.test.ts", "dolphin-web/e2e/terminal-split-workspace.spec.ts"],
-      "command": "npm test && npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "files": ["dolphin-web/src/appRoute.test.ts", "dolphin-web/e2e/dolphin-terminal-adoption.spec.ts"],
+      "command": "npm test && npm run test:e2e -- dolphin-terminal-adoption.spec.ts",
       "scope": "Exact session deep links activate or open once while host route construction remains outside the component."
     },
     "DF-UNIT": {
       "repository": "dolphin",
-      "files": ["dolphin-web/src/cssHygiene.test.ts", "dolphin-web/src/SessionAutomationControl.test.tsx"],
+      "files": ["dolphin-web/src/cssHygiene.test.ts", "dolphin-web/src/dolphinTerminalClient.test.ts"],
       "command": "npm test",
       "scope": "Full Dolphin frontend unit suite with packaged component boundary, shared automation copy, style ordering, focus, motion, and typography contracts."
     },
@@ -197,9 +197,9 @@
     },
     "DF-ROLLBACK": {
       "repository": "dolphin",
-      "files": ["docs/standalone-terminal-extraction-plan.md"],
-      "command": "VITE_DOLPHIN_TERMINAL_SOURCE=legacy npm run build; packaged build and the same 36 terminal browser cases",
-      "scope": "The legacy implementation was built and exercised before removal; the immutable 7f8161c source commit remains the tested Git rollback point."
+      "files": ["_bmad-output/implementation-artifacts/spec-dolphin-terminal-adoption.md"],
+      "command": "git cat-file -e 119cbe4fd96f983dde20eb83bd01c7abcc447d43^{commit} && git diff --check 119cbe4fd96f983dde20eb83bd01c7abcc447d43",
+      "scope": "The adoption baseline is immutable and the isolated candidate preserves the exact rollback point without carrying the dirty source checkout."
     },
     "VIS-DESKTOP": {
       "repository": "standalone",

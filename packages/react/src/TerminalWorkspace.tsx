@@ -848,7 +848,7 @@ function TerminalSessionDock({
           </span>
         ) : error ? (
           <span className="terminal-session-dock-status is-error" role="alert">
-            Sessions unavailable
+            {error}
           </span>
         ) : workspace?.sessions.length && selectedProject ? (
           workspace.sessions.map((session) => {
@@ -1043,6 +1043,7 @@ export default function TerminalWorkspace({
     null,
   );
   const [fullscreenPaneId, setFullscreenPaneId] = useState<string | null>(null);
+  const workspaceStateRef = useRef(workspaceState);
   const workspaceCacheRef = useRef(workspaceCache);
   const dockProjectIdRef = useRef(dockProjectId);
   const mountedRef = useRef(true);
@@ -1069,6 +1070,7 @@ export default function TerminalWorkspace({
     }),
   );
 
+  workspaceStateRef.current = workspaceState;
   workspaceCacheRef.current = workspaceCache;
   dockProjectIdRef.current = dockProjectId;
   activeTargetChangeRef.current = onActiveTargetChange;
@@ -1160,6 +1162,11 @@ export default function TerminalWorkspace({
 
   useEffect(() => {
     if (!activeTab) return;
+    // A persisted tree may disagree with the embedder's first controlled
+    // target. Let the reconciliation effect below acknowledge that target
+    // before emitting any restored active tab back to the host, otherwise the
+    // two effects can continuously overwrite one another.
+    if (requestedTargetRef.current === '') return;
     const key = `${activeTab.projectId}:${activeTab.sessionName}`;
     if (notifiedActiveTargetRef.current === key) return;
     notifiedActiveTargetRef.current = key;
@@ -1244,6 +1251,17 @@ export default function TerminalWorkspace({
     ) => {
       const paneId = requestedPaneId ?? workspaceState.activePaneId;
       const placement = requestedPlacement;
+      const currentState = workspaceStateRef.current;
+      if (
+        !findTerminalTabByTarget(
+          currentState.root,
+          target.projectId,
+          target.session.name,
+        ) &&
+        !findTerminalPane(currentState.root, paneId)
+      ) {
+        return;
+      }
       setWorkspaceState((current) => {
         const existing = findTerminalTabByTarget(
           current.root,
@@ -1623,6 +1641,7 @@ export default function TerminalWorkspace({
   }
 
   async function createDockSession(project: Project, name?: string) {
+    const startedPaneId = workspaceStateRef.current.activePaneId;
     const startedActiveTarget = activeTabRef.current
       ? `${activeTabRef.current.projectId}:${activeTabRef.current.sessionName}`
       : '';
@@ -1634,7 +1653,9 @@ export default function TerminalWorkspace({
       : '';
     if (
       dockProjectIdRef.current !== project.id ||
-      currentActiveTarget !== startedActiveTarget
+      currentActiveTarget !== startedActiveTarget ||
+      workspaceStateRef.current.activePaneId !== startedPaneId ||
+      !findTerminalPane(workspaceStateRef.current.root, startedPaneId)
     ) {
       return;
     }
@@ -1646,6 +1667,7 @@ export default function TerminalWorkspace({
         session: created,
       },
       'tab',
+      startedPaneId,
     );
   }
 

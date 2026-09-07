@@ -64,8 +64,9 @@ function defaultTargetHref(target: TerminalTarget): string {
 }
 
 function resolvedAttachmentLimit(value: number | undefined): number {
-  return value !== undefined && Number.isFinite(value) && value > 0
-    ? Math.floor(value)
+  const wholeBytes = value === undefined ? 0 : Math.floor(value);
+  return Number.isFinite(wholeBytes) && wholeBytes > 0
+    ? wholeBytes
     : MAX_TERMINAL_ATTACHMENT_BYTES;
 }
 

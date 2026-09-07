@@ -55,6 +55,8 @@ The complete default component CSS is loaded by `TerminalWorkspace`; import
 Override tokens on a wrapper instead of targeting internal xterm DOM.
 Set `maxAttachmentBytes` to the gateway's real upload limit whenever it differs
 from the standalone provider's 600 MiB default.
+The reference gateway exposes that effective value as
+`capabilities.attachments.max_bytes`, including environment overrides.
 When a host rejects an optimistic cross-workspace activation, increment
 `selectedTargetRevision` after restoring `selectedSession`; the workspace then
 reactivates that controlled target without discarding the user's tab/split tree.
