@@ -1,6 +1,6 @@
 {
   "name": "@dolphin-terminal/standalone",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,8 +10,8 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@dolphin-terminal/protocol": "0.3.0",
-    "@dolphin-terminal/react": "0.3.0",
+    "@dolphin-terminal/protocol": "0.3.3",
+    "@dolphin-terminal/react": "0.3.3",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },

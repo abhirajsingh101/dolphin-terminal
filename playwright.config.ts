@@ -26,7 +26,8 @@ export default defineConfig({
   webServer: {
     command: [
       'python -m dolphin_terminal serve',
-      projectRoot,
+      `dolphin-terminal=${projectRoot}`,
+      `dolphin-terminal-alt=${projectRoot}/packages`,
       '--port',
       String(port),
       '--session-backend native',

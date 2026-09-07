@@ -1,5 +1,30 @@
 export const MAX_TERMINAL_ATTACHMENT_FILES = 4;
 export const MAX_TERMINAL_ATTACHMENT_BYTES = 600 * 1024 * 1024;
+const MIN_UPLOAD_TIMEOUT_MS = 30_000;
+const CONSERVATIVE_UPLOAD_BYTES_PER_SECOND = 64 * 1024;
+
+/**
+ * Preserve stalled-request recovery without making the advertised large-file
+ * limit depend on a fast connection. The allowance scales to roughly 0.5 Mbps
+ * and always includes a 30-second setup margin.
+ */
+export function terminalAttachmentUploadTimeoutMs(fileSize: number): number {
+  const safeSize = Number.isFinite(fileSize) && fileSize > 0 ? fileSize : 0;
+  return (
+    MIN_UPLOAD_TIMEOUT_MS +
+    Math.ceil((safeSize * 1_000) / CONSERVATIVE_UPLOAD_BYTES_PER_SECOND)
+  );
+}
+
+export function terminalAttachmentLimitLabel(maxBytes: number): string {
+  if (maxBytes >= 1024 * 1024 && maxBytes % (1024 * 1024) === 0) {
+    return `${maxBytes / (1024 * 1024)} MiB`;
+  }
+  if (maxBytes >= 1024 && maxBytes % 1024 === 0) {
+    return `${maxBytes / 1024} KiB`;
+  }
+  return `${maxBytes} bytes`;
+}
 
 export type TerminalAttachmentKind = 'file' | 'image';
 
@@ -51,7 +76,12 @@ function hasSafeAttachmentName(name: string): boolean {
 
 export function selectTerminalAttachments(
   files: ArrayLike<File> | Iterable<File>,
+  maxBytes = MAX_TERMINAL_ATTACHMENT_BYTES,
 ): TerminalAttachmentSelection {
+  const resolvedMaxBytes =
+    Number.isFinite(maxBytes) && Math.floor(maxBytes) > 0
+      ? Math.floor(maxBytes)
+      : MAX_TERMINAL_ATTACHMENT_BYTES;
   const accepted: SelectedTerminalAttachment[] = [];
   const errors: string[] = [];
 
@@ -70,8 +100,10 @@ export function selectTerminalAttachments(
       errors.push(`${file.name}: the file is empty.`);
       continue;
     }
-    if (file.size > MAX_TERMINAL_ATTACHMENT_BYTES) {
-      errors.push(`${file.name}: files must be 600 MiB or smaller.`);
+    if (file.size > resolvedMaxBytes) {
+      errors.push(
+        `${file.name}: files must be ${terminalAttachmentLimitLabel(resolvedMaxBytes)} or smaller.`,
+      );
       continue;
     }
 

@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import {
+  exactCleanCandidateFailures,
+  requiredExactCleanCandidateFailures,
+} from './parityCandidateBinding.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dolphinRoot = resolve(
   process.env.DOLPHIN_TASKS_ROOT ?? resolve(projectRoot, '..', 'dolphin-tasks'),
 );
 const requireDolphin = process.argv.includes('--require-dolphin');
+const expectedStandaloneCandidate =
+  process.env.DOLPHIN_TERMINAL_CANDIDATE_SHA;
 const dolphinAvailable = existsSync(resolve(dolphinRoot, 'dolphin-web'));
 const ledger = JSON.parse(readFileSync(resolve(projectRoot, 'parity/features.json'), 'utf8'));
 const catalog = JSON.parse(
@@ -28,9 +36,75 @@ const expectedGroups = new Map([
 ]);
 const roots = { standalone: projectRoot, dolphin: dolphinRoot };
 const evidence = catalog.evidence ?? {};
+const snapshot = ledger.verification_snapshot ?? {};
+const packageMetadata = JSON.parse(
+  readFileSync(resolve(projectRoot, 'package.json'), 'utf8'),
+);
 
 function fail(message) {
   failures.push(message);
+}
+
+function commitExists(root, revision) {
+  if (!/^[0-9a-f]{40}$/.test(revision ?? '')) return false;
+  try {
+    execFileSync('git', ['cat-file', '-e', `${revision}^{commit}`], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function commitIsAncestorOfHead(root, revision) {
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', revision, 'HEAD'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+if (snapshot.standalone_version !== packageMetadata.version) {
+  fail(
+    `verification snapshot version ${snapshot.standalone_version ?? 'missing'} does not match package ${packageMetadata.version}`,
+  );
+}
+if (!commitExists(projectRoot, snapshot.standalone_implementation_commit)) {
+  fail('verification snapshot lacks a reachable standalone implementation commit');
+} else if (
+  !commitIsAncestorOfHead(projectRoot, snapshot.standalone_implementation_commit)
+) {
+  fail('standalone implementation commit is not an ancestor of the release candidate');
+}
+if (requireDolphin) {
+  for (const bindingFailure of requiredExactCleanCandidateFailures(
+    projectRoot,
+    expectedStandaloneCandidate,
+  )) {
+    fail(`standalone release candidate binding failed: ${bindingFailure}`);
+  }
+}
+if (
+  dolphinAvailable &&
+  !commitExists(dolphinRoot, snapshot.dolphin_candidate_commit)
+) {
+  fail('verification snapshot lacks a reachable Dolphin candidate commit');
+} else if (dolphinAvailable) {
+  for (const bindingFailure of exactCleanCandidateFailures(
+    dolphinRoot,
+    snapshot.dolphin_candidate_commit,
+  )) {
+    fail(`Dolphin candidate binding failed: ${bindingFailure}`);
+  }
+}
+if (snapshot.publication_status_at_verification !== 'not-performed') {
+  fail('verification snapshot must describe the pre-publication release gate');
 }
 
 if (ledger.features?.length !== 83) fail(`expected 83 features, found ${ledger.features?.length}`);

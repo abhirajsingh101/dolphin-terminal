@@ -1,6 +1,6 @@
 {
   "name": "@dolphin-terminal/protocol",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "Provider-neutral TypeScript contracts for Dolphin Terminal hosts and gateways",
   "type": "module",
   "repository": {
@@ -24,6 +24,7 @@
   "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "Apache-2.0"

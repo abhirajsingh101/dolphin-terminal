@@ -22,6 +22,7 @@ const client = createTerminalHttpClient('http://127.0.0.1:8733');
 <TerminalRuntimeProvider
   client={client}
   automation={false}
+  maxAttachmentBytes={300 * 1024 * 1024}
   labels={{
     session: 'session',
     sessions: 'sessions',
@@ -37,6 +38,7 @@ const client = createTerminalHttpClient('http://127.0.0.1:8733');
     primaryProject={project}
     primaryWorkspace={workspace}
     selectedSession={session}
+    selectedTargetRevision={targetRevision}
     isNarrowLayout={false}
     onActiveTargetChange={setExactTarget}
     onCreateSession={client.createSession}
@@ -51,6 +53,13 @@ const client = createTerminalHttpClient('http://127.0.0.1:8733');
 The complete default component CSS is loaded by `TerminalWorkspace`; import
 `theme.css` when the host does not already provide equivalent design tokens.
 Override tokens on a wrapper instead of targeting internal xterm DOM.
+Set `maxAttachmentBytes` to the gateway's real upload limit whenever it differs
+from the standalone provider's 600 MiB default.
+The reference gateway exposes that effective value as
+`capabilities.attachments.max_bytes`, including environment overrides.
+When a host rejects an optimistic cross-workspace activation, increment
+`selectedTargetRevision` after restoring `selectedSession`; the workspace then
+reactivates that controlled target without discarding the user's tab/split tree.
 
 ## Optional dictation
 

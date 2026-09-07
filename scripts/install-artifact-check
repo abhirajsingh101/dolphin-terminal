@@ -25,10 +25,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-wheel=("$release_dir"/dolphin_terminal-0.3.0-*.whl)
-protocol=("$release_dir"/dolphin-terminal-protocol-0.3.0.tgz)
-core=("$release_dir"/dolphin-terminal-core-0.3.0.tgz)
-react=("$release_dir"/dolphin-terminal-react-0.3.0.tgz)
+wheel=("$release_dir"/dolphin_terminal-0.3.3-*.whl)
+protocol=("$release_dir"/dolphin-terminal-protocol-0.3.3.tgz)
+core=("$release_dir"/dolphin-terminal-core-0.3.3.tgz)
+react=("$release_dir"/dolphin-terminal-react-0.3.3.tgz)
 for artifact in "${wheel[0]}" "${protocol[0]}" "${core[0]}" "${react[0]}"; do
   if [[ ! -f "$artifact" ]]; then
     echo "Missing release artifact: $artifact" >&2
@@ -51,7 +51,7 @@ from pathlib import Path
 
 report = json.loads(Path(sys.argv[1]).read_text())
 assert report["ready"] is True, report
-assert report["version"] == "0.3.0", report
+assert report["version"] == "0.3.3", report
 assert report["session_backend"]["id"] == "native", report
 assert report["session_backend"]["available"] is True, report
 assert report["ui"]["available"] is True, report

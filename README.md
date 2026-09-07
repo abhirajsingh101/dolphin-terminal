@@ -32,7 +32,7 @@ prerequisite):
 docker run -d --name dolphin-terminal \
   -p 127.0.0.1:8733:8733 \
   -v /absolute/path/to/project:/workspace \
-  ghcr.io/abhirajsingh101/dolphin-terminal:0.3.0
+  ghcr.io/abhirajsingh101/dolphin-terminal:0.3.3
 ```
 
 To build the same image from source:
@@ -62,7 +62,7 @@ restarts. Run `dolphin-terminal doctor` for a concise readiness check.
 The signed-by-checksum GitHub release wheel needs no source checkout or Node:
 
 ```bash
-python -m pip install "https://github.com/abhirajsingh101/dolphin-terminal/releases/download/v0.3.0/dolphin_terminal-0.3.0-py3-none-any.whl"
+python -m pip install "https://github.com/abhirajsingh101/dolphin-terminal/releases/download/v0.3.3/dolphin_terminal-0.3.3-py3-none-any.whl"
 dolphin-terminal serve /absolute/path/to/project
 ```
 
@@ -95,7 +95,8 @@ only `8733`.
 
 ## Current capabilities
 
-- Exact project/session dock with create, rename and confirmed termination.
+- Exact project/session dock with create, rename, persistent hide/restore, and
+  confirmed termination.
 - Multiple terminal tabs, recursive splits, drag/keyboard placement and
   per-browser-tab persistence.
 - Fullscreen with exclusive focus, accessible controls and mobile switching.
@@ -120,9 +121,10 @@ The standalone project is implemented and Dolphin Tasks consumes the package
 through a thin adapter with duplicate terminal sources removed. Native
 persistence is the standalone default; tmux is an opt-in compatibility
 adapter. All 83 parity entries have executable evidence, and the local
-security/package/browser gates are release-ready. Version 0.3.0 is public on
-[GitHub](https://github.com/abhirajsingh101/dolphin-terminal/releases/tag/v0.3.0)
-and as the `ghcr.io/abhirajsingh101/dolphin-terminal:0.3.0` container. npm and
-PyPI publishing workflows are prepared for their registry-side trusted
-publisher bootstrap. Direct remote exposure remains an operator-controlled
-deployment decision and requires authentication and TLS.
+security/package/browser gates are release-ready. Version 0.3.3 restores the
+explicit pointer Copy and Ctrl-C controls, visible recovery feedback, and
+provider-specific attachment limits needed by embedders. It is released on
+[GitHub](https://github.com/abhirajsingh101/dolphin-terminal/releases/tag/v0.3.3),
+npm, PyPI, and as the `ghcr.io/abhirajsingh101/dolphin-terminal:0.3.3`
+container. Direct remote exposure remains an operator-controlled deployment
+decision and requires authentication and TLS.

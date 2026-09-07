@@ -1,6 +1,6 @@
 {
   "name": "@dolphin-terminal/core",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "Pure terminal tabs, splits, persistence, link, attachment, and reconnect logic",
   "type": "module",
   "repository": {
@@ -24,6 +24,7 @@
   "publishConfig": { "access": "public" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run src"
   },

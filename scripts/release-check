@@ -4,13 +4,19 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 
+if [[ -z "${DOLPHIN_TERMINAL_CANDIDATE_SHA:-}" ]]; then
+  echo "DOLPHIN_TERMINAL_CANDIDATE_SHA must name the externally reviewed release commit" >&2
+  exit 1
+fi
+
 ./scripts/check
-npm run check:parity:dolphin
+DOLPHIN_TERMINAL_CANDIDATE_SHA="$DOLPHIN_TERMINAL_CANDIDATE_SHA" \
+  npm run check:parity:dolphin
 ./scripts/security-check
 ./scripts/build-release
 ./scripts/install-artifact-check
-docker build -t dolphin-terminal:0.3.0-local .
+docker build -t dolphin-terminal:0.3.3-local .
 docker run --rm --entrypoint dolphin-terminal \
-  dolphin-terminal:0.3.0-local doctor --json
+  dolphin-terminal:0.3.3-local doctor --json
 
-echo "RELEASE_CHECK=PASS version=0.3.0 publication=not-performed"
+echo "RELEASE_CHECK=PASS version=0.3.3 publication=not-performed"

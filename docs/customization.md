@@ -31,6 +31,9 @@ when rendering lower-level exports; `TerminalWorkspace` already loads it.
 - `slots`: optional `dockLeading`, `dockTrailing`, `toolbarLeading(target)`,
   and `toolbarTrailing(target)` React content.
 - `portalRoot`: the element used by placement and automation popovers.
+- `maxAttachmentBytes`: the active provider's per-file limit; the picker,
+  drag/drop validation, visible limit copy, and size-aware upload recovery
+  deadline stay aligned with this value.
 - storage keys/storage object, exact-target URL builder, optional dictation
   bridge, and automation capability.
 
@@ -39,6 +42,7 @@ when rendering lower-level exports; `TerminalWorkspace` already loads it.
   client={client}
   icons={{ Power: BrandStopIcon }}
   labels={{ persistentEngine: 'workspace runtime' }}
+  maxAttachmentBytes={300 * 1024 * 1024}
   portalRoot={overlayRoot}
   slots={{
     dockLeading: <BrandMark />,

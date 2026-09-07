@@ -1,6 +1,6 @@
 {
   "schema_version": "dolphin-terminal-evidence-v1",
-  "generated_at": "2026-09-04",
+  "generated_at": "2026-09-07",
   "repositories": {
     "standalone": ".",
     "dolphin": "../dolphin-tasks"
@@ -105,7 +105,7 @@
     "ST-PACKAGE": {
       "repository": "standalone",
       "files": ["scripts/package-check", "scripts/install-artifact-check", "Dockerfile"],
-      "command": "./scripts/package-check && ./scripts/build-release && ./scripts/install-artifact-check && docker build -t dolphin-terminal:0.3.0-local .",
+      "command": "./scripts/package-check && ./scripts/build-release && ./scripts/install-artifact-check && docker build -t dolphin-terminal:0.3.3-local .",
       "scope": "npm/Python artifact contents, clean wheel and npm tarball installs, embedded UI/native daemon, neutral release content, tmux-free default, and runnable container doctor."
     },
     "ST-HOST-BOUNDARY": {
@@ -116,8 +116,8 @@
     },
     "DF-SPLIT": {
       "repository": "dolphin",
-      "files": ["dolphin-web/e2e/terminal-split-workspace.spec.ts"],
-      "command": "npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "files": ["dolphin-web/e2e/dolphin-terminal-adoption.spec.ts"],
+      "command": "npm run test:e2e -- dolphin-terminal-adoption.spec.ts",
       "scope": "Packaged component dock, tabs, drag/keyboard placement, recursive splits, persistence/migration, exact links, fullscreen exclusivity, mobile, and automation behavior in Dolphin."
     },
     "DF-RECONNECT": {
@@ -164,13 +164,13 @@
     },
     "DF-ROUTING": {
       "repository": "dolphin",
-      "files": ["dolphin-web/src/appRoute.test.ts", "dolphin-web/e2e/terminal-split-workspace.spec.ts"],
-      "command": "npm test && npm run test:e2e -- terminal-split-workspace.spec.ts",
+      "files": ["dolphin-web/src/appRoute.test.ts", "dolphin-web/e2e/dolphin-terminal-adoption.spec.ts"],
+      "command": "npm test && npm run test:e2e -- dolphin-terminal-adoption.spec.ts",
       "scope": "Exact session deep links activate or open once while host route construction remains outside the component."
     },
     "DF-UNIT": {
       "repository": "dolphin",
-      "files": ["dolphin-web/src/cssHygiene.test.ts", "dolphin-web/src/SessionAutomationControl.test.tsx"],
+      "files": ["dolphin-web/src/cssHygiene.test.ts", "dolphin-web/src/dolphinTerminalClient.test.ts"],
       "command": "npm test",
       "scope": "Full Dolphin frontend unit suite with packaged component boundary, shared automation copy, style ordering, focus, motion, and typography contracts."
     },
@@ -181,25 +181,23 @@
         "dolphin-backend/tests/test_tmux_session_rename.py",
         "dolphin-backend/tests/test_terminal_attachment_service.py",
         "dolphin-backend/tests/test_terminal_path_service.py",
-        "dolphin-backend/tests/test_image_attachment_service.py",
         "dolphin-backend/tests/test_dictation_service.py",
-        "dolphin-backend/tests/test_session_automation.py",
         "dolphin-backend/tests/test_codex_todo_service.py"
       ],
-      "command": "python -m compileall -q app && python -m pytest -q tests/test_tmux_service.py tests/test_tmux_session_rename.py tests/test_terminal_attachment_service.py tests/test_terminal_path_service.py tests/test_image_attachment_service.py tests/test_dictation_service.py tests/test_session_automation.py tests/test_codex_todo_service.py",
-      "scope": "The 140-test focused Dolphin backend gate retains canonical tmux, attachments, dictation, automation, and todo policy."
+      "command": "python -m compileall -q app && python -m pytest -q tests/test_tmux_service.py tests/test_tmux_session_rename.py tests/test_terminal_attachment_service.py tests/test_terminal_path_service.py tests/test_dictation_service.py tests/test_codex_todo_service.py",
+      "scope": "The focused Dolphin backend gate retains canonical tmux, attachments, paths, dictation, and todo dispatch policy used by the package adapter."
     },
     "DF-BOUNDARY": {
       "repository": "dolphin",
-      "files": ["dolphin-web/scripts/check-terminal-boundary.mjs", "dolphin-web/src/dolphinTerminalClient.ts"],
+      "files": ["dolphin-web/scripts/check-terminal-boundary.mjs", "dolphin-web/scripts/check-terminal-boundary.test.mjs", "dolphin-web/src/dolphinTerminalClient.ts"],
       "command": "npm run check:terminal-boundary && npm run build",
-      "scope": "Dolphin imports only the standalone package UI/core while retaining a thin product adapter; deleted duplicate implementations cannot return unnoticed."
+      "scope": "Dolphin imports only the standalone package UI/core while retaining a thin product adapter; passing and deliberately violating fixtures prove nested JS/JSX/MTS duplicates, direct xterm imports, comment-only wiring, missing CSS, and copied selectors cannot return unnoticed."
     },
     "DF-ROLLBACK": {
       "repository": "dolphin",
-      "files": ["docs/standalone-terminal-extraction-plan.md"],
-      "command": "VITE_DOLPHIN_TERMINAL_SOURCE=legacy npm run build; packaged build and the same 36 terminal browser cases",
-      "scope": "The legacy implementation was built and exercised before removal; the immutable 7f8161c source commit remains the tested Git rollback point."
+      "files": ["_bmad-output/implementation-artifacts/spec-dolphin-terminal-adoption.md"],
+      "command": "git cat-file -e 119cbe4fd96f983dde20eb83bd01c7abcc447d43^{commit} && git diff --check 119cbe4fd96f983dde20eb83bd01c7abcc447d43",
+      "scope": "The adoption baseline is immutable and the isolated candidate preserves the exact rollback point without carrying the dirty source checkout."
     },
     "VIS-DESKTOP": {
       "repository": "standalone",

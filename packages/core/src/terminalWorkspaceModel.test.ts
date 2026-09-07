@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   activateTerminalTab,
   activeTerminalTab,
+  clearActiveTerminalTarget,
   closeTerminalTab,
   collectTerminalPanes,
   createTerminalWorkspace,
@@ -160,6 +161,31 @@ describe('terminal workspace layout', () => {
       sessionName: 'session-b',
     });
     expect(initial.root).not.toBe(assigned.root);
+  });
+
+  it('clears only the active pane when the controlled project has no session', () => {
+    let state = createTerminalWorkspace('project-a', 'session-a', 'pane-a');
+    state = splitTerminalPane(
+      state,
+      'pane-a',
+      'horizontal',
+      'split-a',
+      'pane-b',
+    );
+    state = openTerminalTab(state, 'pane-b', 'project-b', 'session-b');
+
+    const cleared = clearActiveTerminalTarget(state, 'project-empty');
+    const [first, active] = collectTerminalPanes(cleared.root);
+    expect(first.tabs).toEqual([
+      { projectId: 'project-a', sessionName: 'session-a' },
+    ]);
+    expect(active).toMatchObject({
+      id: 'pane-b',
+      preferredProjectId: 'project-empty',
+      tabs: [],
+      activeTabIndex: 0,
+    });
+    expect(cleared.activePaneId).toBe('pane-b');
   });
 
   it('closes only one browser tab and selects its nearest neighbor', () => {

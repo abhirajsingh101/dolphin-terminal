@@ -8,6 +8,8 @@ import {
   sameTerminalAttachmentTarget,
   selectTerminalAttachments,
   terminalAttachmentAgent,
+  terminalAttachmentLimitLabel,
+  terminalAttachmentUploadTimeoutMs,
 } from './terminalAttachmentDrop';
 
 function file(name: string, type: string, size: number): File {
@@ -15,6 +17,14 @@ function file(name: string, type: string, size: number): File {
 }
 
 describe('selectTerminalAttachments', () => {
+  it('scales upload recovery deadlines with file size', () => {
+    expect(terminalAttachmentUploadTimeoutMs(0)).toBe(30_000);
+    expect(terminalAttachmentUploadTimeoutMs(64 * 1024)).toBe(31_000);
+    expect(terminalAttachmentUploadTimeoutMs(300 * 1024 * 1024)).toBe(
+      4_830_000,
+    );
+  });
+
   it('uses a 600 MiB inclusive per-file boundary', () => {
     expect(MAX_TERMINAL_ATTACHMENT_BYTES).toBe(600 * 1024 * 1024);
 
@@ -33,6 +43,35 @@ describe('selectTerminalAttachments', () => {
     expect(selection.errors).toEqual([
       'over.bin: files must be 600 MiB or smaller.',
     ]);
+  });
+
+  it('accepts a provider-specific attachment limit and reports it accurately', () => {
+    const maxBytes = 300 * 1024 * 1024;
+    const selection = selectTerminalAttachments(
+      [
+        file('exact.bin', 'application/octet-stream', maxBytes),
+        file('over.bin', 'application/octet-stream', maxBytes + 1),
+      ],
+      maxBytes,
+    );
+
+    expect(selection.accepted.map((item) => item.file.name)).toEqual([
+      'exact.bin',
+    ]);
+    expect(selection.errors).toEqual([
+      'over.bin: files must be 300 MiB or smaller.',
+    ]);
+    expect(terminalAttachmentLimitLabel(1536)).toBe('1536 bytes');
+  });
+
+  it('falls back to the safe default for invalid public size limits', () => {
+    const ordinary = file('safe.txt', 'text/plain', 4);
+
+    expect(selectTerminalAttachments([ordinary], Number.NaN).accepted).toHaveLength(1);
+    expect(
+      selectTerminalAttachments([ordinary], Number.POSITIVE_INFINITY).accepted,
+    ).toHaveLength(1);
+    expect(selectTerminalAttachments([ordinary], 0.5).accepted).toHaveLength(1);
   });
 
   it('accepts ordinary files and classifies supported images', () => {

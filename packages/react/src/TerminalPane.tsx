@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import '@xterm/xterm/css/xterm.css';
 import {
+  type ChangeEvent,
   type DragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
@@ -47,8 +48,10 @@ import {
   isFileDrag,
   sameTerminalAttachmentTarget,
   selectTerminalAttachments,
+  terminalAttachmentLimitLabel,
   terminalAttachmentAgent,
   terminalAttachmentAgentLabel,
+  terminalAttachmentUploadTimeoutMs,
   type TerminalAttachmentTargetIdentity,
 } from './terminalAttachmentDrop.js';
 import type { TerminalPathResolution, TerminalSession } from './types.js';
@@ -66,6 +69,7 @@ export interface TerminalWorkspaceControls {
     projectEmoji: string;
     sessionName: string;
     isActive: boolean;
+    isSessionClosePending?: boolean;
   }>;
   isActive: boolean;
   isSplit: boolean;
@@ -118,6 +122,7 @@ function DraggableTerminalTab({
       projectEmoji: tab.projectEmoji,
       sessionName: tab.sessionName,
     },
+    disabled: tab.isSessionClosePending,
   });
   const before = useDroppable({
     id: `terminal-tab-insert:${paneId}:${index}:before`,
@@ -173,11 +178,16 @@ function DraggableTerminalTab({
       <button
         aria-label={`Close terminal tab ${tab.sessionName}`}
         className="terminal-pane-tab-close"
+        disabled={tab.isSessionClosePending}
         onClick={(event) => {
           event.stopPropagation();
           onClose();
         }}
-        title={`Close tab (${labels.persistentEngine} keeps running)`}
+        title={
+          tab.isSessionClosePending
+            ? `Closing ${labels.session}…`
+            : `Close tab (${labels.persistentEngine} keeps running)`
+        }
         type="button"
       >
         <X aria-hidden="true" size={13} />
@@ -197,6 +207,22 @@ export interface TerminalPaneProps {
   projectId: string;
   session: TerminalSession | null;
   onSessionClosed: () => void;
+  onSessionCloseError?: (
+    projectId: string,
+    sessionName: string,
+    reason: unknown,
+  ) => void;
+  /** Shared workspace guard that survives moving a tab between panes. */
+  sessionClosePending?: boolean;
+  onSessionCloseRequestStart?: (
+    projectId: string,
+    sessionName: string,
+  ) => boolean;
+  onSessionCloseRequestEnd?: (
+    projectId: string,
+    sessionName: string,
+    succeeded: boolean,
+  ) => void;
   onSessionChanged: () => void;
   dictationTargetId?: string;
   enableWebgl?: boolean;
@@ -215,7 +241,12 @@ type AttachmentTransferState = {
   kind: 'idle' | 'uploading' | 'success' | 'error';
   message: string;
 };
+type CopyState = 'idle' | 'copied' | 'failed';
 const ATTACHMENT_SUCCESS_NOTICE_MS = 3_000;
+const CLOSED_CONNECTION_NOTICE =
+  'The terminal connection closed. Refresh sessions or reconnect.';
+const ERROR_CONNECTION_NOTICE =
+  'The terminal connection failed. Check the session, then reconnect.';
 type CopyLayerScrollAnchor = {
   rowsFromBottom: number;
 };
@@ -239,7 +270,9 @@ async function copyTextToClipboard(text: string): Promise<void> {
   document.body.appendChild(textarea);
   textarea.select();
   try {
-    document.execCommand('copy');
+    if (!document.execCommand('copy')) {
+      throw new Error('The browser refused the clipboard operation.');
+    }
   } finally {
     document.body.removeChild(textarea);
   }
@@ -316,6 +349,10 @@ export default function TerminalPane({
   projectId,
   session,
   onSessionClosed,
+  onSessionCloseError,
+  sessionClosePending = false,
+  onSessionCloseRequestStart,
+  onSessionCloseRequestEnd,
   onSessionChanged,
   dictationTargetId = 'dolphin-terminal-dictation-target',
   enableWebgl = true,
@@ -325,16 +362,20 @@ export default function TerminalPane({
     automation,
     client,
     icons: {
+      CheckCircle2,
+      Copy,
       Maximize2,
       Minimize2,
       Paperclip,
       Power,
       RefreshCw,
+      Square,
       TerminalSquare,
       TextSelect,
       X,
     },
     labels,
+    maxAttachmentBytes,
     slots,
   } = useTerminalRuntime();
   const { activateTarget, clearTarget } = useDictation();
@@ -345,11 +386,13 @@ export default function TerminalPane({
   const uploadAttachment = client.uploadAttachment.bind(client);
   const workspaceFileDownloadUrl = client.fileDownloadUrl.bind(client);
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(true);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const webglRef = useRef<WebglAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const copyLayerRef = useRef<HTMLPreElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const terminalTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const focusActiveTabAfterCloseRef = useRef(false);
   const pendingFitFrameRef = useRef<number | null>(null);
@@ -365,6 +408,7 @@ export default function TerminalPane({
   const fullscreenChangeRef = useRef(workspaceControls?.onFullscreenChange);
   const fullscreenStateRef = useRef(false);
   const attachmentUploadAbortRef = useRef<AbortController | null>(null);
+  const closeRequestRef = useRef<string | null>(null);
   const [connection, setConnection] = useState<ConnectionState>('idle');
   const [connectionNotice, setConnectionNotice] = useState('');
   // Bumped by the Retry control to re-run the connection effect with a fresh
@@ -376,6 +420,10 @@ export default function TerminalPane({
   const [resolvedPaths, setResolvedPaths] =
     useState<ReadonlyMap<string, TerminalPathResolution>>(EMPTY_RESOLVED_PATHS);
   const resolveRequestRef = useRef(0);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<CopyState>('idle');
+  const [operationNotice, setOperationNotice] = useState('');
+  const [closingSessionKey, setClosingSessionKey] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const lastUpdateFlushRef = useRef(0);
   const workspaceTabLayoutKey =
@@ -394,6 +442,13 @@ export default function TerminalPane({
     },
     disabled: !workspaceControls,
   });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // A newly opened tab can land beyond the visible end of a compact tab strip.
   // Keep it in view, and return keyboard focus to the selected neighbor after
@@ -585,7 +640,9 @@ export default function TerminalPane({
         (event.ctrlKey || event.metaKey) &&
         (!event.altKey || event.shiftKey);
       if (event.type === 'keydown' && isCopyKey && terminal.hasSelection()) {
-        void copyTextToClipboard(terminal.getSelection()).catch(() => undefined);
+        void copyTextToClipboard(terminal.getSelection())
+          .then(() => setCopyStatus('copied'))
+          .catch(() => setCopyStatus('failed'));
         return false;
       }
       return true;
@@ -849,6 +906,42 @@ export default function TerminalPane({
   }, [isSelectMode, selectionSnapshot]);
 
   useEffect(() => {
+    if (copyStatus === 'idle') return undefined;
+    const timeout = window.setTimeout(() => setCopyStatus('idle'), 1_400);
+    return () => window.clearTimeout(timeout);
+  }, [copyStatus]);
+
+  useEffect(() => {
+    if (!isSelectMode) {
+      const terminal = terminalRef.current;
+      const updateTerminalSelection = () => {
+        setHasSelection(terminal?.hasSelection() ?? false);
+      };
+      const selectionDisposable = terminal?.onSelectionChange(
+        updateTerminalSelection,
+      );
+      updateTerminalSelection();
+      return () => selectionDisposable?.dispose();
+    }
+
+    function updateNativeSelection() {
+      const selection = window.getSelection();
+      const copyLayer = copyLayerRef.current;
+      const isInsideCopyLayer =
+        !!copyLayer &&
+        !!selection?.anchorNode &&
+        !!selection.focusNode &&
+        copyLayer.contains(selection.anchorNode) &&
+        copyLayer.contains(selection.focusNode);
+      setHasSelection(isInsideCopyLayer && !selection.isCollapsed);
+    }
+
+    document.addEventListener('selectionchange', updateNativeSelection);
+    updateNativeSelection();
+    return () => document.removeEventListener('selectionchange', updateNativeSelection);
+  }, [isSelectMode]);
+
+  useEffect(() => {
     if (!isFullscreen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -885,6 +978,9 @@ export default function TerminalPane({
     setIsSelectMode(false);
     setSelectionSnapshot('');
     setResolvedPaths(EMPTY_RESOLVED_PATHS);
+    setHasSelection(false);
+    setCopyStatus('idle');
+    setOperationNotice('');
     copyLayerScrollAnchorRef.current = null;
     pendingCopyLayerScrollRestoresRef.current = 0;
     copyLayerInteractedRef.current = false;
@@ -1021,6 +1117,7 @@ export default function TerminalPane({
           terminal.writeln('');
           terminal.writeln(`\x1b[31m${payload.message ?? 'Terminal error'}\x1b[0m`);
           setConnection('error');
+          setConnectionNotice(payload.message ?? ERROR_CONNECTION_NOTICE);
         }
       };
 
@@ -1028,7 +1125,10 @@ export default function TerminalPane({
         if (!isCurrentSocket()) return;
         // A failed connection fires onerror and then onclose; the close is
         // where the retry decision is made, so that it is made exactly once.
-        if (reachedOpen) setConnection('error');
+        if (reachedOpen) {
+          setConnection('error');
+          setConnectionNotice(ERROR_CONNECTION_NOTICE);
+        }
       };
 
       socket.onclose = () => {
@@ -1036,6 +1136,7 @@ export default function TerminalPane({
         clearConnectTimer();
         if (!shouldRetryConnection(reachedOpen)) {
           setConnection((current) => (current === 'error' ? 'error' : 'closed'));
+          setConnectionNotice((notice) => notice || CLOSED_CONNECTION_NOTICE);
           return;
         }
         giveUpOrScheduleRetry();
@@ -1104,7 +1205,7 @@ export default function TerminalPane({
       return;
     }
 
-    const selection = selectTerminalAttachments(files);
+    const selection = selectTerminalAttachments(files, maxAttachmentBytes);
     if (selection.accepted.length === 0) {
       setAttachmentTransfer({
         kind: 'error',
@@ -1115,7 +1216,13 @@ export default function TerminalPane({
       return;
     }
 
-    attachmentUploadAbortRef.current?.abort();
+    if (attachmentUploadAbortRef.current !== null) {
+      setAttachmentTransfer({
+        kind: 'error',
+        message: 'Wait for the current attachment upload to finish.',
+      });
+      return;
+    }
     const abortController = new AbortController();
     attachmentUploadAbortRef.current = abortController;
     let pastedCount = 0;
@@ -1126,17 +1233,32 @@ export default function TerminalPane({
         kind: 'uploading',
         message: `Uploading attachment ${index + 1} of ${selection.accepted.length}…`,
       });
+      let uploadTimeoutId: number | null = null;
+      let uploadTimedOut = false;
+      const uploadTimeoutMs = terminalAttachmentUploadTimeoutMs(
+        selectedAttachment.file.size,
+      );
       try {
-        const attachment = await uploadAttachment(
-          targetIdentity.projectId,
-          targetIdentity.sessionName,
-          selectedAttachment.file,
-          selectedAttachment.file.name,
-          selectedAttachment.contentType,
-          abortController.signal,
-        );
+        const attachment = await Promise.race([
+          uploadAttachment(
+            targetIdentity.projectId,
+            targetIdentity.sessionName,
+            selectedAttachment.file,
+            selectedAttachment.file.name,
+            selectedAttachment.contentType,
+            abortController.signal,
+          ),
+          new Promise<never>((_resolve, reject) => {
+            uploadTimeoutId = window.setTimeout(() => {
+              uploadTimedOut = true;
+              abortController.abort();
+              reject(new Error('attachment upload timed out'));
+            }, uploadTimeoutMs);
+          }),
+        ]);
         const currentIdentity = currentAttachmentTargetIdentity();
         const targetStillMatches =
+          attachmentUploadAbortRef.current === abortController &&
           currentIdentity !== null &&
           sameTerminalAttachmentTarget(targetIdentity, currentIdentity) &&
           terminalRef.current === targetTerminal &&
@@ -1157,7 +1279,9 @@ export default function TerminalPane({
       } catch (error) {
         if (abortController.signal.aborted) {
           errors.push(
-            `${selectedAttachment.file.name}: upload stopped because the terminal changed.`,
+            uploadTimedOut
+              ? `${selectedAttachment.file.name}: upload timed out. Retry when the connection is stable.`
+              : `${selectedAttachment.file.name}: upload stopped because the terminal changed.`,
           );
           break;
         }
@@ -1166,12 +1290,15 @@ export default function TerminalPane({
             error instanceof Error ? error.message : 'upload failed'
           }`,
         );
+      } finally {
+        if (uploadTimeoutId !== null) window.clearTimeout(uploadTimeoutId);
       }
     }
 
-    if (attachmentUploadAbortRef.current === abortController) {
-      attachmentUploadAbortRef.current = null;
-    }
+    // Starting another batch aborts this one. Its eventual rejection must not
+    // overwrite the newer batch's progress or success notice.
+    if (attachmentUploadAbortRef.current !== abortController) return;
+    attachmentUploadAbortRef.current = null;
     if (pastedCount === 0) {
       setAttachmentTransfer({
         kind: 'error',
@@ -1223,6 +1350,12 @@ export default function TerminalPane({
     void handleAttachmentFiles(event.dataTransfer.files);
   }
 
+  function handleAttachmentInput(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.currentTarget.files;
+    if (files?.length) void handleAttachmentFiles(files);
+    event.currentTarget.value = '';
+  }
+
   async function toggleSelectMode() {
     const terminal = terminalRef.current;
     if (isSelectMode) {
@@ -1231,6 +1364,7 @@ export default function TerminalPane({
       setIsSelectMode(false);
       setSelectionSnapshot('');
       setResolvedPaths(EMPTY_RESOLVED_PATHS);
+      setHasSelection(terminal?.hasSelection() ?? false);
       copyLayerScrollAnchorRef.current = null;
       pendingCopyLayerScrollRestoresRef.current = 0;
       copyLayerInteractedRef.current = false;
@@ -1246,6 +1380,7 @@ export default function TerminalPane({
     const requestId = snapshotRequestRef.current + 1;
     snapshotRequestRef.current = requestId;
     setSelectionSnapshot(fallbackText);
+    setHasSelection(false);
     setIsSelectMode(true);
 
     if (!session) return;
@@ -1289,12 +1424,71 @@ export default function TerminalPane({
     event.preventDefault();
   }
 
+  async function copySelection() {
+    const text = isSelectMode
+      ? window.getSelection()?.toString()
+      : terminalRef.current?.getSelection();
+    if (!text) return;
+    try {
+      await copyTextToClipboard(text);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('failed');
+    }
+  }
+
   async function handleClose() {
     if (!session) return;
-    const ok = window.confirm(`Close ${labels.session} "${session.name}"?`);
+    const closingProjectId = projectId;
+    const closingSessionName = session.name;
+    const closingKey = `${closingProjectId}:${closingSessionName}`;
+    if (closeRequestRef.current !== null || sessionClosePending) return;
+    const ok = window.confirm(`Close ${labels.session} "${closingSessionName}"?`);
     if (!ok) return;
-    await closeSession(projectId, session.name);
-    onSessionClosed();
+    if (
+      onSessionCloseRequestStart &&
+      !onSessionCloseRequestStart(closingProjectId, closingSessionName)
+    ) {
+      return;
+    }
+    closeRequestRef.current = closingKey;
+    setClosingSessionKey(closingKey);
+    setOperationNotice('');
+    let succeeded = false;
+    try {
+      await closeSession(closingProjectId, closingSessionName);
+      succeeded = true;
+      onSessionClosed();
+    } catch (reason) {
+      const message =
+        reason instanceof Error
+          ? `Could not close ${labels.session} "${closingSessionName}": ${reason.message}`
+          : `Could not close ${labels.session} "${closingSessionName}".`;
+      onSessionCloseError?.(
+        closingProjectId,
+        closingSessionName,
+        new Error(message),
+      );
+      if (
+        mountedRef.current &&
+        projectIdRef.current === closingProjectId &&
+        sessionRef.current?.name === closingSessionName
+      ) {
+        setOperationNotice(message);
+      } else if (!onSessionCloseError) {
+        setOperationNotice(message);
+      }
+    } finally {
+      onSessionCloseRequestEnd?.(
+        closingProjectId,
+        closingSessionName,
+        succeeded,
+      );
+      if (closeRequestRef.current === closingKey) {
+        closeRequestRef.current = null;
+        if (mountedRef.current) setClosingSessionKey(null);
+      }
+    }
   }
 
   function handleRetryConnection() {
@@ -1403,9 +1597,8 @@ export default function TerminalPane({
             </div>
           </div>
         )}
-        {/* Keep only frequent pane actions here. Attachments remain available
-            by drag and drop, selection uses the platform copy shortcut, and
-            interrupting a process remains a terminal keyboard action. */}
+        {/* Keep frequent pane actions explicit so pointer and touch users have
+            the same copy and interrupt controls as keyboard users. */}
         <div className="terminal-actions">
           <span
             aria-label={`Terminal connection: ${connection}`}
@@ -1413,6 +1606,27 @@ export default function TerminalPane({
             role="status"
             title={`Terminal connection: ${connection}`}
           />
+          {connectionNotice ? (
+            <span className="terminal-connection-notice" role="status">
+              {connectionNotice}
+              {connection === 'offline' ||
+              connection === 'closed' ||
+              connection === 'error' ? (
+                <button
+                  className="terminal-retry-button"
+                  onClick={handleRetryConnection}
+                  type="button"
+                >
+                  Retry
+                </button>
+              ) : null}
+            </span>
+          ) : null}
+          {operationNotice ? (
+            <span className="terminal-operation-notice" role="alert">
+              {operationNotice}
+            </span>
+          ) : null}
           {lastUpdate ? (
             <span className="terminal-updated">
               Updated {new Date(lastUpdate).toLocaleTimeString()}
@@ -1445,6 +1659,28 @@ export default function TerminalPane({
               })
             : null}
           <div className="terminal-action-group">
+            <input
+              aria-hidden="true"
+              className="terminal-attachment-input"
+              multiple
+              onChange={handleAttachmentInput}
+              ref={attachmentInputRef}
+              tabIndex={-1}
+              type="file"
+            />
+            <button
+              aria-label={`Attach files or images to ${
+                activeAttachmentAgentLabel ?? 'this terminal'
+              }`}
+              disabled={!canAttachFiles}
+              onClick={() => attachmentInputRef.current?.click()}
+              title={`Attach files or images to ${
+                activeAttachmentAgentLabel ?? 'this terminal'
+              }`}
+              type="button"
+            >
+              <Paperclip aria-hidden="true" size={16} />
+            </button>
             <button
               type="button"
               aria-pressed={isSelectMode}
@@ -1458,8 +1694,45 @@ export default function TerminalPane({
             >
               <TextSelect size={16} />
             </button>
+            <button
+              disabled={!hasSelection}
+              onClick={copySelection}
+              title={
+                copyStatus === 'copied'
+                  ? 'Copied'
+                  : copyStatus === 'failed'
+                    ? 'Copy failed'
+                    : 'Copy selection'
+              }
+              type="button"
+            >
+              {copyStatus === 'copied' ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <Copy size={16} />
+              )}
+            </button>
+            <span
+              aria-live="polite"
+              className="terminal-sr-only"
+              role="status"
+            >
+              {copyStatus === 'copied'
+                ? 'Terminal selection copied.'
+                : copyStatus === 'failed'
+                  ? 'Terminal selection could not be copied.'
+                  : ''}
+            </span>
           </div>
           <div className="terminal-action-group">
+            <button
+              disabled={!session}
+              onClick={() => sendToTerminal('\x03')}
+              title="Send Ctrl-C"
+              type="button"
+            >
+              <Square size={16} />
+            </button>
             <button
               type="button"
               aria-pressed={isFullscreen}
@@ -1502,8 +1775,12 @@ export default function TerminalPane({
               className="terminal-action-danger"
               type="button"
               onClick={handleClose}
-              disabled={!session}
-              title="Close session"
+              disabled={!session || closingSessionKey !== null || sessionClosePending}
+              title={
+                closingSessionKey || sessionClosePending
+                  ? 'Closing session…'
+                  : 'Close session'
+              }
             >
               <Power size={16} />
             </button>
@@ -1532,7 +1809,7 @@ export default function TerminalPane({
             </strong>
             <span>
               {canAttachFiles
-                ? 'Up to 4 files · 600 MiB each · PNG/JPEG images sanitized'
+                ? `Up to 4 files · ${terminalAttachmentLimitLabel(maxAttachmentBytes)} each · PNG/JPEG images sanitized`
                 : attachmentUnavailableMessage()}
             </span>
           </div>

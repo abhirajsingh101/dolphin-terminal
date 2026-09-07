@@ -1,6 +1,6 @@
 {
   "name": "dolphin-terminal-monorepo",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "A standalone, embeddable terminal workspace for humans and AI agents",
   "private": true,
   "license": "Apache-2.0",
@@ -25,7 +25,7 @@
     "serve": "PYTHONPATH=python python -m dolphin_terminal serve",
     "doctor": "PYTHONPATH=python python -m dolphin_terminal doctor",
     "check": "npm run typecheck && npm test && npm run build && PYTHONPATH=python python -m pytest -q python/tests",
-    "test": "npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/react",
+    "test": "node --test scripts/parityCandidateBinding.test.mjs scripts/containerTagPreflight.test.mjs && npm run build -w @dolphin-terminal/protocol && npm run build -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/core && npm run test -w @dolphin-terminal/react",
     "test:e2e": "npm run build && playwright test",
     "test:soak": "PYTHONPATH=python python scripts/native-soak.py",
     "check:parity": "node scripts/verify-parity.mjs",

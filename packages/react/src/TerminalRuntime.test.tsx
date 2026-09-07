@@ -13,6 +13,7 @@ function RuntimeProbe() {
     <output
       data-default-power={runtime.icons.Power === defaultTerminalIcons.Power}
       data-label={runtime.labels.newSession}
+      data-max-attachment-bytes={runtime.maxAttachmentBytes}
       data-no-portal={runtime.portalRoot === null}
       data-overridden-terminal={
         runtime.icons.TerminalSquare === defaultTerminalIcons.Power
@@ -30,6 +31,7 @@ describe('TerminalRuntimeProvider customization', () => {
         client={client}
         icons={{ TerminalSquare: defaultTerminalIcons.Power }}
         labels={{ newSession: 'Open shell' }}
+        maxAttachmentBytes={300 * 1024 * 1024}
         portalRoot={null}
         slots={{ dockLeading: 'Host slot' }}
       >
@@ -39,8 +41,19 @@ describe('TerminalRuntimeProvider customization', () => {
 
     expect(markup).toContain('data-default-power="true"');
     expect(markup).toContain('data-label="Open shell"');
+    expect(markup).toContain('data-max-attachment-bytes="314572800"');
     expect(markup).toContain('data-no-portal="true"');
     expect(markup).toContain('data-overridden-terminal="true"');
     expect(markup).toContain('data-slot="Host slot"');
+  });
+
+  it('never normalizes a fractional positive ceiling to zero bytes', () => {
+    const markup = renderToStaticMarkup(
+      <TerminalRuntimeProvider client={client} maxAttachmentBytes={0.5}>
+        <RuntimeProbe />
+      </TerminalRuntimeProvider>,
+    );
+
+    expect(markup).toContain('data-max-attachment-bytes="629145600"');
   });
 });
