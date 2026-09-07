@@ -339,7 +339,7 @@ def create_app(
     )
     application = FastAPI(
         title="Dolphin Terminal Gateway",
-        version="0.3.1",
+        version="0.3.2",
         docs_url="/terminal/docs",
         openapi_url="/terminal/openapi.json",
     )
